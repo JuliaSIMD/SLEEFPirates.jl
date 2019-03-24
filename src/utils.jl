@@ -35,7 +35,7 @@ end
 @inline float2integer(d::Float64) = (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
 @inline float2integer(d::Float32) = (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
 
-@inline float2integer(d::SIMDPirates.SVecProduct) = float2integer(SVec(SIMDPirates.extract_data(d)))
+# @inline float2integer(d::SIMDPirates.SVecProduct) = float2integer(SVec(SIMDPirates.extract_data(d)))
 @inline function float2integer(d::SVec{N,Float64}) where {N}
     SVec{N,Int64}(ntuple(Val(N)) do n
         Core.VecElement((reinterpret(Int64, d[n]) >> significand_bits(Float64)) % Int)

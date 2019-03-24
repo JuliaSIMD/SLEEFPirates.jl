@@ -6,11 +6,11 @@ using Base.Math: uinttype, @horner, exponent_bias, exponent_mask, significand_bi
 using SIMDPirates
 using SIMDPirates: vifelse
 
-const FloatType64 = Union{Float64,SVec{<:Any,Float64},SIMDPirates.SVecProduct{<:Any,Float64}}
-const FloatType32 = Union{Float32,SVec{<:Any,Float32},SIMDPirates.SVecProduct{<:Any,Float32}}
+const FloatType64 = Union{Float64,SVec{<:Any,Float64}}
+const FloatType32 = Union{Float32,SVec{<:Any,Float32}}
 const FloatType = Union{FloatType64,FloatType32}
-const IntegerType64 = Union{Int64,SVec{<:Any,Int64},SIMDPirates.SVecProduct{<:Any,Int64}}
-const IntegerType32 = Union{Int32,SVec{<:Any,Int32},SIMDPirates.SVecProduct{<:Any,Int32}}
+const IntegerType64 = Union{Int64,SVec{<:Any,Int64}}
+const IntegerType32 = Union{Int32,SVec{<:Any,Int32}}
 const IntegerType = Union{IntegerType64,IntegerType32}
 
 fpinttype(::Type{Float64}) = Int
@@ -125,7 +125,7 @@ for func in (:sin, :cos, :tan, :sincos, :asin, :acos, :atan, :sinh, :cosh, :tanh
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
         @inline $func(x::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(x)))
-        @inline $func(x::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(x))))
+        # @inline $func(x::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(x))))
     end
 end
 
@@ -134,7 +134,7 @@ for func in (:atan, :hypot)
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
         @inline $func(a::SIMDPirates.AbstractStructVec, b::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b)))
-        @inline $func(a::SIMDPirates.VecOrProd, b::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b))))
+        # @inline $func(a::SIMDPirates.VecOrProd, b::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b))))
     end
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))

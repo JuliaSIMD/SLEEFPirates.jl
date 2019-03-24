@@ -94,8 +94,8 @@ where `significand ∈ [1, 2)`.
     q = float2integer(d) & I(exponent_raw_max(T))
     q = vifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
 end
-@inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(SVec(SIMDPirates.extract_data(d)))
-@inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(SVec(SIMDPirates.extract_data(d)))
+# @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(SVec(SIMDPirates.extract_data(d)))
+# @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(SVec(SIMDPirates.extract_data(d)))
 # similar to ilogbk, but argument has to be a normalized float value
 @inline function ilogb2k(d::FloatType)
     T = eltype(d)

@@ -1,13 +1,13 @@
 import Base: -, <, copysign, flipsign, convert
 
-const vIEEEFloat = Union{IEEEFloat,SVec{<:Any,<:IEEEFloat},SIMDPirates.SVecProduct{<:Any,<:IEEEFloat}}
+const vIEEEFloat = Union{IEEEFloat,SVec{<:Any,<:IEEEFloat}}#,SIMDPirates.SVecProduct{<:Any,<:IEEEFloat}}
 
 struct Double{T<:vIEEEFloat} <: Number
     hi::T
     lo::T
 end
 @inline Double(x::T) where {T<:vIEEEFloat} = Double(x, zero(T))
-@inline Double(x::T) where {T<:SIMDPirates.SVecProduct} = Double(SVec(SIMDPirates.extract_data(x)), zero(T))
+# @inline Double(x::T) where {T<:SIMDPirates.SVecProduct} = Double(SVec(SIMDPirates.extract_data(x)), zero(T))
 @inline function Double(x::SIMDPirates.AbstractStructVec, y::SIMDPirates.AbstractStructVec)
     Double(SVec(SIMDPirates.extract_data(x)), SVec(SIMDPirates.extract_data(y)))
 end
@@ -22,7 +22,7 @@ end
 @inline trunclo(x::Float64) = reinterpret(Float64, reinterpret(UInt64, x) & 0xffff_ffff_f800_0000) # clear lower 27 bits (leave upper 26 bits)
 @inline trunclo(x::Float32) = reinterpret(Float32, reinterpret(UInt32, x) & 0xffff_f000) # clear lowest 12 bits (leave upper 12 bits)
 
-@inline trunclo(x::SIMDPirates.SVecProduct) = trunclo(SVec(SIMDPirates.extract_data(x)))
+# @inline trunclo(x::SIMDPirates.SVecProduct) = trunclo(SVec(SIMDPirates.extract_data(x)))
 @inline function trunclo(x::SVec{N,Float64}) where {N}
     reinterpret(SVec{N,Float64}, reinterpret(SVec{N,UInt64}, x) & 0xffff_ffff_f800_0000) # clear lower 27 bits (leave upper 26 bits)
 end
