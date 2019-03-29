@@ -125,7 +125,7 @@ for func in (:sin, :cos, :tan, :sincos, :asin, :acos, :atan, :sinh, :cosh, :tanh
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
         @inline $func(x::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(x)))
-        # @inline $func(x::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(x))))
+        @inline $func(x::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x)))
     end
 end
 
