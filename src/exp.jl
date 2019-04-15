@@ -132,7 +132,8 @@ Compute `eˣ- 1` accurately for small values of `x`.
 """
 @inline function expm1(x::FloatType)
     T = eltype(x)
-    u = T(dadd2(expk2(Double(x)), -T(1.0)))
+    v = dadd2(expk2(Double(x)), -T(1.0))
+    u = v.hi + v.lo
     # u = vifelse(x > max_expm1(T), T(Inf), u)
     # u = vifelse(x < min_expm1(T), T(-1.0), u)
     # u = vifelse(isnegzero(x), T(-0.0), u)
