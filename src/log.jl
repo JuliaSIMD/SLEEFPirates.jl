@@ -132,8 +132,8 @@ the natural expoenential function `exp(x)`
     r = V(s)
 
     # r = vifelse(isinf(d), T(Inf), r)
-    # r = vifelse((d < 0) | isnan(d), T(NaN), r)
-    # r = vifelse(d == 0, T(-Inf), r)
+    r = vifelse((d < 0) | isnan(d), T(NaN), r)
+    r = vifelse(d == 0, T(-Inf), r)
 
     return r
 end
@@ -230,8 +230,8 @@ the natural expoenential function `exp(x)`
     x = x * t + T(MLN2) * e
 
     # x = vifelse(isinf(d), T(Inf), x)
-    # x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
-    # x = vifelse(d == zero(I), T(-Inf), x)
+    x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
+    x = vifelse(d == zero(I), T(-Inf), x)
 
     return x
 end
