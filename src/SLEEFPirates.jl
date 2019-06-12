@@ -107,6 +107,7 @@ const TRIG_MAX(::Type{Float32}) = 1f7
 const SQRT_MAX(::Type{Float64}) = 1.3407807929942596355e154
 const SQRT_MAX(::Type{Float32}) = 18446743523953729536f0
 
+include("estrin.jl")
 include("utils.jl")  # utility functions
 include("double.jl") # Dekker style double double functions
 include("priv.jl")   # private math functions

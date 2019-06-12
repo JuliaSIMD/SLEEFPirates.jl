@@ -95,14 +95,16 @@ end
     c3 = 0.2857142932794299317
     c2 = 0.3999999999635251990
     c1 = 0.6666666666667333541
-    return @horner x c1 c2 c3 c4 c5 c6 c7
+    # return @horner x c1 c2 c3 c4 c5 c6 c7
+    @horner x c1 c2 c3 c4 c5 c6 c7
 end
 
 @inline function log_kernel(x::FloatType32)
     c3 = 0.3027294874f0
     c2 = 0.3996108174f0
     c1 = 0.6666694880f0
-    return @horner x c1 c2 c3
+    # return @horner x c1 c2 c3
+    @horner x c1 c2 c3
 end
 
 """
@@ -191,7 +193,8 @@ end
     c3 = 0.399999999950799600689777
     c2 = 0.6666666666667778740063
     c1 = 2.0
-    return @horner x c1 c2 c3 c4 c5 c6 c7 c8
+    # return @horner x c1 c2 c3 c4 c5 c6 c7 c8
+    @horner x c1 c2 c3 c4 c5 c6 c7 c8
 end
 
 @inline function log_fast_kernel(x::FloatType32)
@@ -200,7 +203,8 @@ end
     c3 = 0.400005877017974853515625f0
     c2 = 0.666666686534881591796875f0
     c1 = 2f0
-    return @horner x c1 c2 c3 c4 c5
+    # return @horner x c1 c2 c3 c4 c5
+    @horner x c1 c2 c3 c4 c5
 end
 
 # @inline fm(x::SIMDPirates.AbstractSIMDVector) = SVec(SIMDPirates.extract_data(x))
