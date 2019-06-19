@@ -130,12 +130,13 @@ for func in (:sin, :cos, :tan, :sincos, :asin, :acos, :atan, :sinh, :cosh, :tanh
     end
 end
 
-for func in (:atan, :hypot)
+
+for func in (:atan, :hypot, :pow)
     @eval begin
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
         @inline $func(a::SIMDPirates.AbstractStructVec, b::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b)))
-        # @inline $func(a::SIMDPirates.VecOrProd, b::SIMDPirates.VecOrProd) = SIMDPirates.extract_data($func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b))))
+        @inline $func(x::SIMDPirates.Vec, y::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x), SVec(y)))
     end
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))

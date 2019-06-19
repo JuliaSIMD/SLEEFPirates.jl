@@ -62,88 +62,90 @@ end
 # quick-two-sum x+y
 @inline function dadd(x::vIEEEFloat, y::vIEEEFloat) #WARNING |x| >= |y|
     s = x + y
-    Double(s, (x - s) + y)
+    Double(s, SIMDPirates.evsub(x, s) + y)
 end
 
 @inline function dadd(x::vIEEEFloat, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
     s = x + y.hi
-    Double(s, (x - s) + y.hi + y.lo)
+    Double(s, SIMDPirates.evsub(x, s) + y.hi + y.lo)
 end
 
 @inline function dadd(x::Double{<:vIEEEFloat}, y::vIEEEFloat) #WARNING |x| >= |y|
     s = x.hi + y
-    Double(s, (x.hi - s) + y + x.lo)
+    Double(s, SIMDPirates.evsub(x.hi, s) + y + x.lo)
 end
 
 @inline function dadd(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
     s = x.hi + y.hi
-    Double(s, (x.hi - s) + y.hi + y.lo + x.lo)
+    Double(s, SIMDPirates.evsub(x.hi, s) + y.hi + y.lo + x.lo)
 end
 
 @inline function dsub(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
     s = x.hi - y.hi
-    Double(s, (x.hi - s) - y.hi - y.lo + x.lo)
+    Double(s, SIMDPirates.evsub(x.hi, s) - y.hi - y.lo + x.lo)
 end
 
 @inline function dsub(x::Double{<:vIEEEFloat}, y::vIEEEFloat) #WARNING |x| >= |y|
     s = x.hi - y
-    Double(s, (x.hi - s) - y + x.lo)
+    Double(s, SIMDPirates.evsub(x.hi, s) - y + x.lo)
 end
 
 @inline function dsub(x::vIEEEFloat, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
     s = x - y.hi
-    Double(s, (x - s) - y.hi - y.lo)
+    Double(s, SIMDPirates.evsub(x, s) - y.hi - y.lo)
 end
 
 @inline function dsub(x::vIEEEFloat, y::vIEEEFloat) #WARNING |x| >= |y|
     s = x - y
-    Double(s, (x - s) - y)
+    Double(s, SIMDPirates.evsub(x, s) - y)
 end
 
 
 # two-sum x+y  NO BRANCH
 @inline function dadd2(x::vIEEEFloat, y::vIEEEFloat)
     s = x + y
-    v = s - x
-    Double(s, (x - (s - v)) + (y - v))
+    v = SIMDPirates.evsub(s, x)
+    Double(s, SIMDPirates.evsub(x, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(y, v))
 end
 
 @inline function dadd2(x::vIEEEFloat, y::Double{<:vIEEEFloat})
     s = x + y.hi
     v = s - x
-    Double(s, (x - (s - v)) + (y.hi - v) + y.lo)
+    Double(s, SIMDPirates.evsub(x, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(y.hi, v) + y.lo)
 end
 
 @inline dadd2(x::Double{<:vIEEEFloat}, y::vIEEEFloat) = dadd2(y, x)
 
 @inline function dadd2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) where {T<:vIEEEFloat}
     s = x.hi + y.hi
-    v = s - x.hi
-    Double(s, (x.hi - (s - v)) + (y.hi - v) + x.lo + y.lo)
+    v = SIMDPirates.evsub(s, x.hi)
+    smv = SIMDPirates.evsub(s, v)
+    yhimv = SIMDPirates.evsub(y.hi, v)
+    Double(s, SIMDPirates.evsub(x.hi, smv) + (yhimv) + x.lo + y.lo)
 end
 
 @inline function dsub2(x::vIEEEFloat, y::vIEEEFloat)
     s = x - y
     v = s - x
-    Double(s, (x - (s - v)) + (-y - v))
+    Double(s, SIMDPirates.evsub(x, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(-y, v))
 end
 
 @inline function dsub2(x::vIEEEFloat, y::Double{<:vIEEEFloat})
     s = x - y.hi
     v = s - x
-    Double(s, (x - (s - v)) + (-y.hi - v) - y.lo)
+    Double(s, SIMDPirates.evsub(x, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(-y.hi, v) - y.lo)
 end
 
 @inline function dsub2(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
     s = x.hi - y
     v = s - x.hi
-    Double(s, (x.hi - (s - v)) + (-y - v) + x.lo)
+    Double(s, SIMDPirates.evsub(x.hi, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(-y, v) + x.lo)
 end
 
 @inline function dsub2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
     s = x.hi - y.hi
     v = s - x.hi
-    Double(s, (x.hi - (s - v)) + (-y.hi - v) + x.lo - y.lo)
+    Double(s, SIMDPirates.evsub(x.hi, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(-y.hi, v) + x.lo - y.lo)
 end
 
 @inline (::Type{SVec{N,T}})(x::SVec{N,T}) where {N,T} = x

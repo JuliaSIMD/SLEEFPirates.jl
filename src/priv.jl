@@ -324,7 +324,7 @@ end
 
 
 
-@inline function logk_kernel(x::Double{<:FloatType64})
+@inline function logk_kernel(x::Double{V}) where {V<:FloatType64}
     c10 = 0.116255524079935043668677
     c9 = 0.103239680901072952701192
     c8 = 0.117754809412463995466069
@@ -334,8 +334,10 @@ end
     c4 = 0.222222222230083560345903
     c3 = 0.285714285714249172087875
     c2 = 0.400000000000000077715612
-    c1 = Double(0.666666666666666629659233, 3.80554962542412056336616e-17)
-    dadd2(dmul(x, @estrin x.hi c2 c3 c4 c5 c6 c7 c8 c9 c10), c1)
+    c1 = Double(V(0.666666666666666629659233), V(3.80554962542412056336616e-17))
+    estr =  @estrin x.hi c2 c3 c4 c5 c6 c7 c8 c9 c10
+    xestr = dmul(x, estr)
+    dadd(xestr, c1) #should be dadd2, but there is an unresolved performance issue
 end
 
 @inline function logk_kernel(x::Double{<:FloatType32})
@@ -343,10 +345,10 @@ end
     c3 = 0.285112679004669189453125f0
     c2 = 0.400007992982864379882812f0
     c1 = Double(0.66666662693023681640625f0, 3.69183861259614332084311f-9)
-    dadd2(dmul(x, @horner x.hi c2 c3 c4), c1)
+    dadd(dmul(x, @horner x.hi c2 c3 c4), c1)
 end
 
-@inline function logk(d::FloatType)
+@inline function logk(d::V) where (V <: FloatType)
     T = eltype(d)
     I = fpinttype(T)
     o = d < floatmin(T)
@@ -358,12 +360,14 @@ end
     e = vifelse(o, e - I(64), e)
 
     x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
+
     x2 = dsqu(x)
 
     t  = logk_kernel(x2)
 
-    s = dmul(MDLN2(T), T(e))
+    s = dmul(MDLN2(T), V(e))
     s = dadd(s, scale(x, T(2.0)))
     s = dadd(s, dmul(dmul(x2, x), t))
     return s
+
 end
