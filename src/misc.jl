@@ -4,7 +4,7 @@
 
 Exponentiation operator, returns `x` raised to the power `y`.
 """
-function pow(x::V, y::V) where {V <: FloatType}
+@inline function pow(x::V, y::V) where {V <: FloatType}
     T = eltype(x)
     yi = unsafe_trunc(fpinttype(T), y)
     yisint = yi == y
