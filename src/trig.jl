@@ -34,7 +34,7 @@ end
     return dadd(c1, x.hi * (@horner x.hi c2 c3 c4))
 end
 
-function sin(d::V) where V <: FloatType64
+@inline function sin(d::V) where V <: FloatType64
     T = eltype(d)
     qh = trunc(d * (T(M_1_PI) / (1 << 24)))
     ql = round(d * T(M_1_PI) - qh * (1 << 24))
@@ -62,7 +62,7 @@ function sin(d::V) where V <: FloatType64
     return u
 end
 
-function sin(d::V) where V <: FloatType32
+@inline function sin(d::V) where V <: FloatType32
     T = eltype(d)
     I = fpinttype(T)
 
@@ -88,7 +88,7 @@ function sin(d::V) where V <: FloatType32
     return u
 end
 
-function cos(d::V) where V <: FloatType64
+@inline function cos(d::V) where V <: FloatType64
     T = eltype(d)
     I = fpinttype(T)
     d = abs(d)
@@ -190,7 +190,7 @@ end
     return @horner x c1 c2 c3 c4
 end
 
-function sin_fast(d::FloatType64)
+@inline function sin_fast(d::FloatType64)
     T = eltype(d)
     I = fpinttype(T)
     t = d
@@ -219,7 +219,7 @@ function sin_fast(d::FloatType64)
     return u
 end
 
-function sin_fast(d::FloatType32)
+@inline function sin_fast(d::FloatType32)
     T = eltype(d)
     I = fpinttype(T)
     t = d
@@ -245,7 +245,7 @@ function sin_fast(d::FloatType32)
     return u
 end
 
-function cos_fast(d::FloatType64)
+@inline function cos_fast(d::FloatType64)
     T = eltype(d)
     I = fpinttype(T)
     t = d
@@ -274,7 +274,7 @@ function cos_fast(d::FloatType64)
     return u
 end
 
-function cos_fast(d::FloatType32)
+@inline function cos_fast(d::FloatType32)
     T = eltype(d)
     I = fpinttype(T)
     t = d
@@ -450,7 +450,7 @@ end
     return (rx, ry)
 end
 
-function sincos(d::V) where V <: FloatType64
+@inline function sincos(d::V) where V <: FloatType64
     T = eltype(d)
     qh = trunc(d * ((2 * T(M_1_PI)) / (1 << 24)))
     ql = round(d * (2 * T(M_1_PI)) - qh * (1 << 24))
@@ -501,7 +501,7 @@ function sincos(d::V) where V <: FloatType64
 end
 
 
-function sincos(d::V) where V <: FloatType32
+@inline function sincos(d::V) where V <: FloatType32
     T = eltype(d)
     I = fpinttype(T)
     q = round(d * (2 * T(M_1_PI)))
@@ -595,7 +595,7 @@ end
     return @horner x c1 c2 c3 c4 c5 c6 c7
 end
 
-function tan_fast(d::FloatType64)
+@inline function tan_fast(d::FloatType64)
     T = eltype(d)
     qh = trunc(d * (2 * T(M_1_PI)) / (1 << 24))
     ql = round(d * (2 * T(M_1_PI)) - qh * (1 << 24))
@@ -628,7 +628,7 @@ function tan_fast(d::FloatType64)
     return u
 end
 
-function tan_fast(d::FloatType32)
+@inline function tan_fast(d::FloatType32)
     T = eltype(d)
     I = fpinttype(T)
     q = round(d * (2 * T(M_1_PI)))
@@ -691,7 +691,7 @@ end
     return dadd(c1,  x.hi * (@horner x.hi c2 c3 c4 c5 c6 c7))
 end
 
-function tan(d::V) where V <: FloatType64
+@inline function tan(d::V) where V <: FloatType64
     T = eltype(d)
     qh = trunc(d * (T(M_2_PI)) / (1 << 24))
     s = dadd2(dmul(Double(T(M_2_PI_H), T(M_2_PI_L)), d), vifelse(d < 0, V(-0.5), V(0.5)) - qh * (1 << 24))
@@ -729,7 +729,7 @@ function tan(d::V) where V <: FloatType64
     return v
 end
 
-function tan(d::V) where V <: FloatType32
+@inline function tan(d::V) where V <: FloatType32
     T = eltype(d)
     q = round(d * (T(M_2_PI)))
 
@@ -770,7 +770,7 @@ end
 
 Compute the inverse tangent of `x`, where the output is in radians.
 """
-function atan(x::T) where {T<:FloatType}
+@inline function atan(x::T) where {T<:FloatType}
     u = T(atan2k(Double(abs(x)), Double(T(1))))
     u = vifelse(isinf(x), T(PI_2), u)
     flipsign(u, x)
@@ -817,7 +817,7 @@ end
 
 Compute the inverse tangent of `x`, where the output is in radians.
 """
-function atan_fast(x::T) where {T<:FloatType}
+@inline function atan_fast(x::T) where {T<:FloatType}
     I = fpinttype(eltype(x))
 
     q = vifelse(signbit(x), I(2), I(0))
@@ -845,7 +845,7 @@ const under_atan2(::Type{Float32}) = 2.9387372783541830947f-39
 
 Compute the inverse tangent of `x/y`, using the signs of both `x` and `y` to determine the quadrant of the return value.
 """
-function atan(x::T, y::T) where {T<:FloatType}
+@inline function atan(x::T, y::T) where {T<:FloatType}
     I = fpinttype(eltype(x))
     absy_under_atan = abs(y) < under_atan2(eltype(y))
     x = vifelse(absy_under_atan, x * T(Int64(1) << 53), x)
@@ -870,7 +870,7 @@ end
 
 Compute the inverse tangent of `x/y`, using the signs of both `x` and `y` to determine the quadrant of the return value.
 """
-function atan_fast(x::T, y::T) where {T<:FloatType}
+@inline function atan_fast(x::T, y::T) where {T<:FloatType}
     r = atan2k_fast(abs(x), y)
     r = flipsign(r, y)
     r = vifelse(y == zero(T), T(PI_2), r)
@@ -890,7 +890,7 @@ end
 
 Compute the inverse sine of `x`, where the output is in radians.
 """
-function asin(x::T) where {T<:FloatType}
+@inline function asin(x::T) where {T<:FloatType}
     d = atan2k(Double(abs(x)), dsqrt(dmul(dadd(T(1), x), dsub(T(1), x))))
     u = T(d)
     u = vifelse(abs(x) == one(T), T(PI_2), u)
@@ -903,7 +903,7 @@ end
 
 Compute the inverse sine of `x`, where the output is in radians.
 """
-function asin_fast(x::T) where {T<:FloatType}
+@inline function asin_fast(x::T) where {T<:FloatType}
     flipsign(atan2k_fast(abs(x), _sqrt((1 + x) * (1 - x))), x)
 end
 
@@ -914,7 +914,7 @@ end
 
 Compute the inverse cosine of `x`, where the output is in radians.
 """
-function acos(x::V) where {V<:FloatType}
+@inline function acos(x::V) where {V<:FloatType}
     T = eltype(x)
     d = atan2k(dsqrt(dmul(dadd(T(1), x), dsub(T(1), x))), Double(abs(x)))
     d = flipsign(d, x)
@@ -929,6 +929,6 @@ end
 
 Compute the inverse cosine of `x`, where the output is in radians.
 """
-function acos_fast(x::T) where {T<:Union{Float32,Float64}}
+@inline function acos_fast(x::T) where {T<:Union{Float32,Float64}}
     flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), T(M_PI), T(0))
 end

@@ -152,5 +152,13 @@ for func in (:atan, :hypot, :pow)
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
+@inline function sincos(x::Vec)
+    s, c = sincos(SVec(x))
+    SIMDPirates.extract_data(s), SIMDPirates.extract_data(c)
+end
+@inline function sincos_fast(x::Vec)
+    s, c = sincos_fast(SVec(x))
+    SIMDPirates.extract_data(s), SIMDPirates.extract_data(c)
+end
 
 end # module
