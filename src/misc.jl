@@ -11,20 +11,41 @@ Exponentiation operator, returns `x` raised to the power `y`.
     yisodd = isodd(yi) & yisint
 
     absx = abs(x)
-    logkx = logk(x)
+    logkx = logk(absx)
     logkxy = dmul(logkx, y)
-    expk(logkxy)
+    result = expk(logkxy)
     
-    result = expk(dmul(logk(abs(x)), y))
+#    result = vifelse(isnan(result), V(Inf), result)
+#    result = vifelse(x > 0, result, vifelse(!yisint, V(NaN), vifelse(yisodd, -result, result)))
 
-    result = vifelse(isnan(result), V(Inf), result)
-    result = vifelse(x > 0, result, vifelse(!yisint, V(NaN), vifelse(yisodd, -result, result)))
+#    efx = flipsign(abs(x) - 1, y)
+#    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
+#    result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+#    result = vifelse(isnan(x) | isnan(y), V(NaN), result)
+#    result = vifelse((y == 0) | (x == 1), V(1.0), result)
 
-    efx = flipsign(abs(x) - 1, y)
-    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
-    result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-    result = vifelse(isnan(x) | isnan(y), V(NaN), result)
-    result = vifelse((y == 0) | (x == 1), V(1.0), result)
+    return result
+
+end
+@inline function pow_fast(x::V, y::V) where {V <: FloatType}
+    T = eltype(x)
+    yi = unsafe_trunc(fpinttype(T), y)
+    yisint = yi == y
+    yisodd = isodd(yi) & yisint
+
+    absx = abs(x)
+    logkx = logk(absx)
+    logkxy = dmul(logkx, y)
+    result = expk(logkxy)
+    
+#    result = vifelse(isnan(result), V(Inf), result)
+#    result = vifelse(x > 0, result, vifelse(!yisint, V(NaN), vifelse(yisodd, -result, result)))
+
+#    efx = flipsign(abs(x) - 1, y)
+#    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
+#    result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+#    result = vifelse(isnan(x) | isnan(y), V(NaN), result)
+#    result = vifelse((y == 0) | (x == 1), V(1.0), result)
 
     return result
 

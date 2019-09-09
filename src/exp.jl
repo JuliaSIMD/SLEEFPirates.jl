@@ -56,8 +56,8 @@ Compute the base-`2` exponential of `x`, that is `2ˣ`.
 
     u = ldexp2k(u, qi)
 
-    u = vifelse(d > max_exp2(T), T(Inf), u)
-    u = vifelse(d < min_exp2(T), T(0.0), u)
+#    u = vifelse(d > max_exp2(T), T(Inf), u)
+#    u = vifelse(d < min_exp2(T), T(0.0), u)
 
     return u
 end
