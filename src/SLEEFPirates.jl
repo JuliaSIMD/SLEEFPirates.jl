@@ -161,8 +161,8 @@ end
     SIMDPirates.extract_data(s), SIMDPirates.extract_data(c)
 end
 @inline logit(x) = log(x/(1-x))
-@inline logit(x::AbstractSIMDVector{W,T}) where {W,T} = log(SIMDPirates.vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x)))
+@inline logit(x::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = log(SIMDPirates.vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x)))
 @inline invlogit(x) = 1 / (1 + exp(-x))
-@inline invlogit(x::AbstractSIMDVector{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
+@inline invlogit(x::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
 
 end # module
