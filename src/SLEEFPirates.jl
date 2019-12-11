@@ -165,8 +165,11 @@ end
 @inline invlogit(x) = 1 / (1 + exp(-x))
 @inline invlogit(x::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
 
-# include("precompile.jl")
-# _precompile_()
+include("precompile.jl")
+_precompile_()
 
+function __init__()
+    _precompile_()
+end
 
 end # module
