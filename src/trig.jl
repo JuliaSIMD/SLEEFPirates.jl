@@ -23,7 +23,7 @@ function cos end
     c3 = -0.000198412698412046454654947
     c2 =  0.00833333333333318056201922
     c1 = -0.166666666666666657414808
-    return dadd(c1, x.hi * (@estrin x.hi c2 c3 c4 c5 c6 c7 c8))
+    return dadd(c1, x.hi * (estrin(x.hi, (c2, c3, c4, c5, c6, c7, c8))))
 end
 
 @inline function sincos_kernel(x::Double{<:FloatType32})
@@ -180,7 +180,7 @@ function cos_fast end
     c3 = -0.000198412698412696162806809
     c2 =  0.00833333333333332974823815
     c1 = -0.166666666666666657414808
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9))
 end
 @inline function sincos_fast_kernel(x::FloatType32)
     c4 =  2.6083159809786593541503f-06
@@ -581,7 +581,7 @@ function tan_fast end
     c3  =  0.0539682539049961967903002
     c2  =  0.133333333334818976423364
     c1  =  0.333333333333320047664472
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16))
 end
 
 @inline function tan_fast_kernel(x::FloatType32)
@@ -677,7 +677,7 @@ end
     c3 = 0.0539682539781298417636002
     c2 = 0.133333333333125941821962
     c1 = 0.333333333333334980164153
-    return dadd(c1, x.hi * (@estrin x.hi c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15))
+    return dadd(c1, x.hi * (estrin(x.hi, (c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15))))
 end
 
 @inline function tan_kernel(x::Double{<:FloatType32})
@@ -797,7 +797,7 @@ end
     c3  = -0.14285714266771329383765
     c2  =  0.199999999996591265594148
     c1  = -0.333333333333311110369124
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19))
 end
 
 @inline function atan_fast_kernel(x::FloatType32)
@@ -809,7 +809,7 @@ end
     c3 = -0.142027363181114196777344f0
     c2 =  0.199926957488059997558594f0
     c1 = -0.333331018686294555664062f0
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8))
 end
 
 """

@@ -1,5 +1,5 @@
 
-@generated function _estrin(x, p::NTuple{N,T}) where {T,N}
+@generated function estrin(x, p::NTuple{N,T}) where {T,N}
     # N = length(p)
     # log2N = VectorizationBase.intlog2(N)
     ex = quote $(Expr(:meta,:inline)) end
@@ -48,6 +48,7 @@ end
 
 
 macro estrin(x, p...)#::Vararg{N}) where {N}
-    esc(Expr(:call, :_estrin, x, Expr(:tuple, p...)))
+    esc(Expr(:call, :estrin, x, Expr(:tuple, p...)))
     # esc(:(_estrin($x, $p)))
 end
+

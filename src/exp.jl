@@ -26,7 +26,7 @@ const min_exp2(::Type{Float32}) = -150f0
     c3  = 0.5550410866482046596e-1
     c2  = 0.2402265069591012214
     c1  = 0.6931471805599452862
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
 end
 
 @inline function exp2_kernel(x::FloatType32)
@@ -81,7 +81,7 @@ const min_exp10(::Type{<:FloatType32}) = -45.15449934959718f0         # log10 2^
     c3  = 0.2034678592293432953e1
     c2  = 0.2650949055239205876e1
     c1  = 0.2302585092994045901e1
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
 end
 
 @inline function exp10_kernel(x::FloatType32)
@@ -159,7 +159,7 @@ const min_exp(::Type{<:FloatType32}) = -103.97208f0               # ≈ log 2^-1
     c3  = 0.0416666666666665047591422
     c2  = 0.166666666666666851703837
     c1  = 0.50
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
 end
 
 @inline function exp_kernel(x::FloatType32)

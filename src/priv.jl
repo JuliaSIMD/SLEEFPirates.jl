@@ -138,8 +138,8 @@ c3f = -0.142626821994781494140625f0
 c2f =  0.199983194470405578613281f0
 c1f = -0.333332866430282592773438f0
 
-global @inline atan2k_fast_kernel(x::FloatType64) = @estrin x c1d c2d c3d c4d c5d c6d c7d c8d c9d c10d c11d c12d c13d c14d c15d c16d c17d c18d c19d c20d
-global @inline atan2k_fast_kernel(x::FloatType32) = @estrin x c1f c2f c3f c4f c5f c6f c7f c8f c9f
+global @inline atan2k_fast_kernel(x::FloatType64) = estrin(x, (c1d, c2d, c3d, c4d, c5d, c6d, c7d, c8d, c9d, c10d, c11d, c12d, c13d, c14d, c15d, c16d, c17d, c18d, c19d, c20d))
+global @inline atan2k_fast_kernel(x::FloatType32) = estrin(x, (c1f, c2f, c3f, c4f, c5f, c6f, c7f, c8f, c9f))
 
 @inline function atan2k_fast(y::V, x::V) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
     xl0 = x < 0
@@ -160,8 +160,8 @@ global @inline atan2k_fast_kernel(x::FloatType32) = @estrin x c1f c2f c3f c4f c5
 end
 
 
-global @inline atan2k_kernel(x::Double{<:FloatType64}) = @estrin x.hi c1d c2d c3d c4d c5d c6d c7d c8d c9d c10d c11d c12d c13d c14d c15d c16d c17d c18d c19d c20d
-global @inline atan2k_kernel(x::Double{<:FloatType32}) = dadd(c1f, x.hi * (@estrin x.hi c2f c3f c4f c5f c6f c7f c8f c9f))
+global @inline atan2k_kernel(x::Double{<:FloatType64}) = estrin(x.hi, (c1d, c2d, c3d, c4d, c5d, c6d, c7d, c8d, c9d, c10d, c11d, c12d, c13d, c14d, c15d, c16d, c17d, c18d, c19d, c20d))
+global @inline atan2k_kernel(x::Double{<:FloatType32}) = dadd(c1f, x.hi * (estrin(x.hi, (c2f, c3f, c4f, c5f, c6f, c7f, c8f, c9f))))
 
 @inline function atan2k(y::Double{V}, x::Double{V}) where {T,V<:Union{T,SVec{<:Any,T}}}
     xl0 = x < 0
@@ -208,7 +208,7 @@ const under_expk(::Type{Float32}) = -104f0
     c3  = 0.0416666666665409524128449
     c2  = 0.166666666666666740681535
     c1  = 0.500000000000000999200722
-    return @estrin x c1 c2 c3 c4 c5 c6 c7 c8 c9 c10
+    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10))
 end
 
 @inline function  expk_kernel(x::FloatType32)
@@ -253,7 +253,7 @@ end
     c3  = 0.8333333333333347095e-2
     c2  = 0.4166666666666669905e-1
     c1 = 0.1666666666666666574e0
-    u = @estrin x.hi c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+    u = estrin(x.hi, (c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
     return dadd(dmul(x, u), c1)
 end
 
@@ -335,7 +335,7 @@ end
     c3 = 0.285714285714249172087875
     c2 = 0.400000000000000077715612
     c1 = Double(V(0.666666666666666629659233), V(3.80554962542412056336616e-17))
-    estr =  @estrin x.hi c2 c3 c4 c5 c6 c7 c8 c9 c10
+    estr =  estrin(x.hi, (c2, c3, c4, c5, c6, c7, c8, c9, c10))
     xestr = dmul(x, estr)
     dadd(xestr, c1) #should be dadd2, but there is an unresolved performance issue
 end
