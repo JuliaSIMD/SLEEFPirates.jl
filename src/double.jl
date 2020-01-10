@@ -148,7 +148,6 @@ end
     Double(s, SIMDPirates.evsub(x.hi, SIMDPirates.evsub(s, v)) + SIMDPirates.evsub(-y.hi, v) + x.lo - y.lo)
 end
 
-@inline (::Type{SVec{N,T}})(x::SVec{N,T}) where {N,T} = x
 @inline function SIMDPirates.vifelse(b::SVec{N,Bool}, x::Double{T1}, y::Double{T2}) where {N,T<:Union{Float32,Float64},T1<:Union{T,SVec{N,T}},T2<:Union{T,SVec{N,T}}}
     V = SVec{N,T}
     Double(vifelse(b, V(x.hi), V(y.hi)), vifelse(b, V(x.lo), V(y.lo)))
