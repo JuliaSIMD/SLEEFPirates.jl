@@ -31,7 +31,7 @@ end
     c3 = -0.0001981069071916863322258f0
     c2 =  0.00833307858556509017944336f0
     c1 = -0.166666597127914428710938f0
-    return dadd(c1, x.hi * (@horner x.hi c2 c3 c4))
+    return dadd(c1, vmul(x.hi, (@horner x.hi c2 c3 c4)))
 end
 
 @inline function sin(d::V) where V <: FloatType64
@@ -68,10 +68,10 @@ end
 
     q = round(d * T(M_1_PI))
 
-    s = dadd2(d, q * -PI_A(T))
-    s = dadd2(s, q * -PI_B(T))
-    s = dadd2(s, q * -PI_C(T))
-    s = dadd2(s, q * -PI_D(T))
+    s = dadd2(d, vmul(q, -PI_A(T)))
+    s = dadd2(s, vmul(q, -PI_B(T)))
+    s = dadd2(s, vmul(q, -PI_C(T)))
+    s = dadd2(s, vmul(q, -PI_D(T)))
 
     t = s
     s = dsqu(s)

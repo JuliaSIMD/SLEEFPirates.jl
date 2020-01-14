@@ -53,9 +53,9 @@ end
 
 macro horner(x, p...)
     N = length(p)
-    ex = Expr(:call, :muladd, p[N], :x, p[N-1])
+    ex = Expr(:call, :vmuladd, p[N], x, p[N-1])
     for n ∈ 2:N-1
-        ex = Expr(:call, :muladd, ex, :x, p[N-n])
+        ex = Expr(:call, :vmuladd, ex, x, p[N-n])
     end
     esc(ex)
 end
