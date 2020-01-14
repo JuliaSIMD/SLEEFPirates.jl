@@ -1,7 +1,7 @@
 module SLEEFPirates
 
 
-using Base.Math: uinttype, @horner, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
+using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
 using SIMDPirates
 using SIMDPirates: vifelse

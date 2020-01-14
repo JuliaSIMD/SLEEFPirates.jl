@@ -42,7 +42,6 @@
         lastp = nextp
         lastx = nextx
     end
-
     ex
 end
 
@@ -52,3 +51,11 @@ macro estrin(x, p...)#::Vararg{N}) where {N}
     # esc(:(_estrin($x, $p)))
 end
 
+macro horner(x, p...)
+    N = length(p)
+    ex = Expr(:call, :muladd, p[N], :x, p[N-1])
+    for n ∈ 2:N-1
+        ex = Expr(:call, :muladd, ex, :x, p[N-n])
+    end
+    esc(ex)
+end
