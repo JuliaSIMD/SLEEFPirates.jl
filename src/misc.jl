@@ -16,7 +16,7 @@ Exponentiation operator, returns `x` raised to the power `y`.
     result = expk(logkxy)
     
 #    result = vifelse(isnan(result), V(Inf), result)
-#    result = vifelse(x > 0, result, vifelse(!yisint, V(NaN), vifelse(yisodd, -result, result)))
+#    result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
 
 #    efx = flipsign(abs(x) - 1, y)
 #    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
@@ -39,7 +39,7 @@ end
     result = expk(logkxy)
     
 #    result = vifelse(isnan(result), V(Inf), result)
-#    result = vifelse(x > 0, result, vifelse(!yisint, V(NaN), vifelse(yisodd, -result, result)))
+#    result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
 
 #    efx = flipsign(abs(x) - 1, y)
 #    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)

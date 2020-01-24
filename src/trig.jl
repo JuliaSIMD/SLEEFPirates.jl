@@ -57,7 +57,7 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     u = vifelse(qli & 1 != 0, -u, u)
-    u = vifelse((!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    u = vifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -83,7 +83,7 @@ end
 
     qi = unsafe_trunc(fpinttype(T), q)
     u = vifelse(qi & one(I) != zero(I), -u, u)
-    # u = vifelse((!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    # u = vifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -115,7 +115,7 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     u = vifelse(qli & I(2) == zero(I), -u, u)
-    # u = vifelse(!isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
+    # u = vifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -143,7 +143,7 @@ end
 
     qi = unsafe_trunc(fpinttype(T), q)
     u = vifelse(qi & I(2) == zero(I), -u, u)
-    u = vifelse(!isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
+    u = vifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -214,7 +214,7 @@ end
     u = sincos_fast_kernel(s)
     u = muladd(s, u * d, d)
 
-    u = vifelse((!isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    u = vifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -240,7 +240,7 @@ end
 
     u = muladd(s, u * d, d)
 
-    u = vifelse((!isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    u = vifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -269,7 +269,7 @@ end
     u = sincos_fast_kernel(s)
     u = muladd(s, u * d, d)
 
-    u = vifelse(!isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
+    u = vifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -295,7 +295,7 @@ end
 
     u = muladd(s, u * d, d)
 
-    u = vifelse(!isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
+    u = vifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -621,7 +621,7 @@ end
     u = vifelse(qli_odd, inv(u), u)
 
     # u = vifelse(
-    #     (!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
+    #     (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
     #     T(-0.0), u
     # )
 
@@ -653,7 +653,7 @@ end
     u = vifelse(qli_odd, inv(u), u)
 
     # u = vifelse(
-    #     (!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
+    #     (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
     #     T(-0.0), u
     # )
 
@@ -722,7 +722,7 @@ end
     v = V(x)
 
     v = vifelse(
-        (!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
+        (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
         T(-0.0), v
     )
 
@@ -757,7 +757,7 @@ end
     v = V(x)
 
     v = vifelse(
-        (!isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
+        (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
         T(-0.0), v
     )
 
