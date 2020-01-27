@@ -129,6 +129,19 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
         @inline $func(x::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x)))
     end
 end
+for func ∈ (:sin, :cos)
+    funcpi = Symbol(func, :pi)
+    funcfast = Symbol(func, :_fast)
+    funcpifast = Symbol(func, :pi_fast)
+    @eval @inline $funcpi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline Base.$funcpi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline $funcpifast(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline $funcpi(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(Vec{W,T}, T(π)), v))))
+    @eval @inline $funcpifast(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(Vec{W,T}, T(π)), v))))
+end
+@inline sincospi(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos(vmul(vbroadcast(Vec{W,T}, π), v))
+@inline sincospi_fast(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Vec{W,T}, π), v))
+
 for func in (:sin, :cos, :tan, :sincos, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1, :cbrt)
     @eval begin
