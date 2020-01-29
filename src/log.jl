@@ -263,7 +263,7 @@ function log_fast_noinline(d::FloatType)
     return x
 end
 
-# function log_fast_debug(d::SIMDPirates.AbstractStructVec)
+# function log_fast_debug(d::SIMDPirates.SVec)
 #     d1 = d[1]
 #     T = eltype(d)
 #     I = fpinttype(T)

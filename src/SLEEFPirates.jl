@@ -125,7 +125,7 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
-        @inline $func(x::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(x)))
+        @inline $func(x::SIMDPirates.SVec) = $func(SVec(SIMDPirates.extract_data(x)))
         @inline $func(x::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x)))
     end
 end
@@ -133,20 +133,21 @@ for func ∈ (:sin, :cos)
     funcpi = Symbol(func, :pi)
     funcfast = Symbol(func, :_fast)
     funcpifast = Symbol(func, :pi_fast)
-    @eval @inline $funcpi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
-    @eval @inline Base.$funcpi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
-    @eval @inline $funcpifast(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline $funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline Base.$funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Vec{W,T}, T(π)), v))
+    @eval @inline $funcpifast(v::SIMDPirates.SVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Vec{W,T}, T(π)), v))
     @eval @inline $funcpi(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(Vec{W,T}, T(π)), v))))
     @eval @inline $funcpifast(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(Vec{W,T}, T(π)), v))))
 end
 @inline sincospi(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos(vmul(vbroadcast(Vec{W,T}, π), v))
 @inline sincospi_fast(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Vec{W,T}, π), v))
 
-for func in (:sin, :cos, :tan, :sincos, :asin, :acos, :atan, :sinh, :cosh, :tanh,
-             :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1, :cbrt)
-    @eval begin
-        @inline Base.$func(x::SIMDPirates.SVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x)
-    end
+for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
+    @eval @inline Base.$func(x::SIMDPirates.SVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x)
+end
+for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
+    func_fast = Symbol(func, :_fast)
+    @eval @inline Base.$func(x::SIMDPirates.SVec{W,T}) where {W,T<:Union{Float32,Float64}}= $func_fast(x)
 end
 
 for func in (:atan, :hypot, :pow)
@@ -154,7 +155,7 @@ for func in (:atan, :hypot, :pow)
     @eval begin
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
-        @inline $func(a::SIMDPirates.AbstractStructVec, b::SIMDPirates.AbstractStructVec) = $func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b)))
+        @inline $func(a::SIMDPirates.SVec, b::SIMDPirates.SVec) = $func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b)))
         @inline $func(x::SIMDPirates.Vec, y::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x), SVec(y)))
         @inline Base.$func2(x::SIMDPirates.SVec{W,T}, y::SIMDPirates.Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.SVec(y))
         @inline Base.$func2(x::SIMDPirates.Vec{W,T}, y::SIMDPirates.SVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.SVec(x), y)
@@ -184,8 +185,5 @@ end
 include("precompile.jl")
 _precompile_()
 
-function __init__()
-    _precompile_()
-end
 
 end # module

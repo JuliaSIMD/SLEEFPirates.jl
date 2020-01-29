@@ -8,14 +8,14 @@ struct Double{T<:vIEEEFloat} <: Number
 end
 @inline Double(x::T) where {T<:vIEEEFloat} = Double(x, zero(T))
 # @inline Double(x::T) where {T<:SIMDPirates.SVecProduct} = Double(SVec(SIMDPirates.extract_data(x)), zero(T))
-@inline function Double(x::SIMDPirates.AbstractStructVec, y::SIMDPirates.AbstractStructVec)
+@inline function Double(x::SIMDPirates.SVec, y::SIMDPirates.SVec)
     Double(SVec(SIMDPirates.extract_data(x)), SVec(SIMDPirates.extract_data(y)))
 end
 
 (::Type{T})(x::Double{T}) where {T<:vIEEEFloat} = x.hi + x.lo
 
 @inline Base.eltype(d::Double{T}) where {T <: IEEEFloat} = T
-@inline function Base.eltype(d::Double{S}) where {N,T,S <: Union{SVec{N,T}, SIMDPirates.AbstractStructVec{N,T}}}
+@inline function Base.eltype(d::Double{S}) where {N,T,S <: Union{SVec{N,T}, SIMDPirates.SVec{N,T}}}
     T
 end
 

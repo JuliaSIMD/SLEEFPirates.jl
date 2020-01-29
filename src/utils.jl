@@ -27,30 +27,31 @@ const FMA_FAST = true#is_fma_fast(Float64) && is_fma_fast(Float32)
 # @inline integer2float(::Type{Float32}, m::Union{Int32,Int64}) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
 @inline integer2float(::Type{Float32}, m::Int32) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
 
-@inline function integer2float(::Type{<:Union{SVec{N,Float64},Float64}}, m::SVec{N,Int}) where {N}
-    reinterpret(SVec{N,Float64}, SVec{N,Int64}(ntuple(Val(N)) do n
-        Core.VecElement(m[n] % Int64)
-    end) << Int64(significand_bits(Float64)))
+@static if Int === Int64
+    @inline function integer2float(::Type{<:Union{SVec{W,Float64},Float64}}, m::SVec{W,Int}) where {W}
+        reinterpret(SVec{W,Float64}, m << significand_bits(Float64))
+    end
+    @inline function float2integer(d::SVec{W,Float64}) where {W}
+        (reinterpret(SVec{W,Int64}, d) >> significand_bits(Float64))
+    end
+else
+    @inline function integer2float(::Type{<:Union{SVec{W,Float64},Float64}}, m::SVec{W,Int}) where {W}
+        reinterpret(SVec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
+    end
+    @inline function float2integer(d::SVec{W,Float64}) where {W}
+        (reinterpret(SVec{W,Int64}, d) >> significand_bits(Float64)) % Int
+    end
 end
-@inline function integer2float(::Type{<:Union{SVec{N,Float32},Float32}}, m::SVec{N,<:Integer}) where {N}
-    reinterpret(SVec{N,Float32}, SVec{N,Int32}(ntuple(Val(N)) do n
-        Core.VecElement(m[n] % Int32)
-    end) << Int32(significand_bits(Float32)))
+@inline function integer2float(::Type{<:Union{SVec{W,Float32},Float32}}, m::SVec{W,<:Integer}) where {W}
+    reinterpret(SVec{W,Float32}, (m % Int32) << Int32(significand_bits(Float32)))
 end
 
 @inline float2integer(d::Float64) = (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
 @inline float2integer(d::Float32) = (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
 
 # @inline float2integer(d::SIMDPirates.SVecProduct) = float2integer(SVec(SIMDPirates.extract_data(d)))
-@inline function float2integer(d::SVec{N,Float64}) where {N}
-    SVec{N,Int64}(ntuple(Val(N)) do n
-        Core.VecElement((reinterpret(Int64, d[n]) >> significand_bits(Float64)) % Int)
-    end)
-end
-@inline function float2integer(d::SVec{N,Float32}) where {N}
-    SVec{N,Int32}(ntuple(Val(N)) do n
-        Core.VecElement((reinterpret(Int32, d[n]) >> Int32(significand_bits(Float32))) % Int32)
-    end)
+@inline function float2integer(d::SVec{W,Float32}) where {W}
+    (reinterpret(SVec{W,Int32}, d) >> significand_bits(Float32)) % Int32
 end
 
 @inline function pow2i(::Type{T}, q::I) where {T<:Union{Float32,Float64},I<:IntegerType}
