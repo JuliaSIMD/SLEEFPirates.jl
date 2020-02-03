@@ -7,7 +7,7 @@ function try_to_find_libmvec()
         "libmvec.so"
     ]
     paths = [
-        "/usr/lib64/", "/usr/lib"
+        "/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"
     ]
     find_library(libnames, paths)
 end
