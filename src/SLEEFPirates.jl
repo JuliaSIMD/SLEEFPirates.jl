@@ -116,6 +116,7 @@ include("log.jl")    # logarithmic functions
 include("trig.jl")   # trigonometric and inverse trigonometric functions
 include("hyp.jl")    # hyperbolic and inverse hyperbolic functions
 include("misc.jl")   # miscallenous math functions including pow and cbrt
+include("svmlwrap.jl")
 
 # fallback definitions
 

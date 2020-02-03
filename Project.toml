@@ -4,6 +4,7 @@ authors = ["chriselrod <elrodc@gmail.com>"]
 version = "0.3.2"
 
 [deps]
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 SIMDPirates = "21efa798-c60a-11e8-04d3-e1a92915a26a"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
