@@ -29,14 +29,14 @@ function create_svmlwrap_file(mveclib)
                     vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
                     svtyp = "SVec{$ts,$typ}"
                     def1 = "@inline $f(v::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,), v)"
-                    def2 = "@inline $f(v::$svtyp) = SVec($f(extract_data(v)))"
+                    def2 = "@inline Base.$f(v::$svtyp) = SVec($f(extract_data(v)))"
                     push!(file, def1)
                     push!(file, def2)
                 end
             end
         end
     end
-    let f = :pow
+    let f = :pow, sf = :^
         for (l,s) ∈ sizes
             if s ≤ REGISTER_SIZE
                 for isdouble ∈ (true,false)
@@ -48,7 +48,7 @@ function create_svmlwrap_file(mveclib)
                         vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
                         svtyp = "SVec{$ts,$typ}"
                         def1 = "@inline $f(v1::$vtyp, v2::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,$vtyp), v1, v2)"
-                        def2 = "@inline $f(v1::$svtyp, v2::$svtyp) = SVec($f(extract_data(v1),extract_data(v2)))"
+                        def2 = "@inline $sf(v1::$svtyp, v2::$svtyp) = SVec($f(extract_data(v1),extract_data(v2)))"
                         push!(file, def1)
                         push!(file, def2)
                     end
