@@ -18,6 +18,7 @@ end
 @inline function Base.eltype(d::Double{S}) where {N,T,S <: Union{SVec{N,T}, SIMDPirates.SVec{N,T}}}
     T
 end
+@inline SIMDPirates.vifelse(u::Unsigned, v1::Double, v2::Double) = Double(vifelse(u, v1.hi, v2.hi), vifelse(u, v1.lo, v2.lo))
 
 @inline trunclo(x::Float64) = reinterpret(Float64, reinterpret(UInt64, x) & 0xffff_ffff_f800_0000) # clear lower 27 bits (leave upper 26 bits)
 @inline trunclo(x::Float32) = reinterpret(Float32, reinterpret(UInt32, x) & 0xffff_f000) # clear lowest 12 bits (leave upper 12 bits)
