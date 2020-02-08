@@ -1,6 +1,5 @@
-using SLEEFPirates
+using SLEEFPirates, VectorizationBase
 using Test
-using Printf
 
 using Base.Math: significand_bits
 
@@ -106,17 +105,37 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
             xmax = rmax == u ? x : xmax
             rmean += u
             if debug && u > tol_debug
-                @printf("%s = %.20g\n%s  = %.20g\nx = %.20g\nulp = %g\n", strip_module_name(xfun), q, strip_module_name(fun), T(c), x, ulp(T(c)))
+                @show strip_module_name(xfun), q, strip_module_name(fun), T(c), x, ulp(T(c))
             end
         end
         rmean = rmean / length(xx)
 
         t = @test trunc(rmax, digits=1) <= tol
 
-        fmtxloc = isa(xmax, Tuple) ? string('(', join((@sprintf("%.5f", x) for x in xmax), ", "), ')') : @sprintf("%.5f", xmax)
-        println(rpad(strip_module_name(xfun), 18, " "), ": max ", @sprintf("%f", rmax),
-            rpad(" at x = " * fmtxloc, 40, " "),
-            ": mean ", @sprintf("%f", rmean))
+        
+        fmtxloc = isa(xmax, Tuple) ? join(xmax, ", ") : string(xmax)
+        println(
+            rpad(strip_module_name(xfun), 18, " "), ": max ", rmax,
+            rpad(" at x = " * fmtxloc, 40, " "),  ": mean ", rmean
+        )
+
+        # Vector test is mostly to make sure that they do not error
+        # Results should either be the same as scalar
+        # Or they're from another library (e.g., GLIBC), and may differ slighlty
+        W = VectorizationBase.pick_vector_width(T)
+        nargs = length(first(xx))
+        if nargs == 1
+            offset = first(xx) < 1 ? 0 : 1
+            vxes1 = SVec(ntuple(w -> Core.VecElement{T}(offset + w / (W + 1)), W))
+            v1 = xfun(vxes1)
+            t2 = ntuple(w -> T(fun(offset + big(w) / (W + 1))), W)
+        else
+            vxes1 = ntuple(i -> SVec(ntuple(w -> Core.VecElement{T}(w + i), Val(W))), nargs)
+            v1 = xfun(vxes1...)
+            t2 = ntuple(w -> T(fun(ntuple(n -> big(n)+w, nargs)...)), W)
+        end
+        t1 = ntuple(w -> v1[w], length(v1))
+        @test all(t1 .≈ t2)
     end
 end
 

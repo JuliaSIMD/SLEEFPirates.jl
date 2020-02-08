@@ -1,10 +1,9 @@
 module SLEEFPirates
 
-
 using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
 using SIMDPirates
-using SIMDPirates: vifelse
+using SIMDPirates: vifelse, vzero
 
 const FloatType64 = Union{Float64,SVec{<:Any,Float64}}
 const FloatType32 = Union{Float32,SVec{<:Any,Float32}}
@@ -126,7 +125,6 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
-        @inline $func(x::SIMDPirates.SVec) = $func(SVec(SIMDPirates.extract_data(x)))
         @inline $func(x::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x)))
     end
 end

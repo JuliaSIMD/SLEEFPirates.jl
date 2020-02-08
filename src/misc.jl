@@ -15,14 +15,14 @@ Exponentiation operator, returns `x` raised to the power `y`.
     logkxy = dmul(logkx, y)
     result = expk(logkxy)
     
-#    result = vifelse(isnan(result), V(Inf), result)
-#    result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
+   result = vifelse(isnan(result), V(Inf), result)
+   result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
 
-#    efx = flipsign(abs(x) - 1, y)
-#    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
-#    result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-#    result = vifelse(isnan(x) | isnan(y), V(NaN), result)
-#    result = vifelse((y == 0) | (x == 1), V(1.0), result)
+   efx = flipsign(abs(x) - 1, y)
+   result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
+   result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+   result = vifelse(isnan(x) | isnan(y), V(NaN), result)
+   result = vifelse((y == 0) | (x == 1), V(1.0), result)
 
     return result
 
@@ -38,8 +38,8 @@ end
     logkxy = dmul(logkx, y)
     result = expk(logkxy)
     
-#    result = vifelse(isnan(result), V(Inf), result)
-#    result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
+   # result = vifelse(isnan(result), V(Inf), result)
+   # result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
 
 #    efx = flipsign(abs(x) - 1, y)
 #    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
@@ -109,7 +109,7 @@ function cbrt(d::V) where {V <: FloatType}
     e  = ilogbk(abs(d)) + 1
     d  = ldexp2k(d, -e)
     r  = (e + 6144) % 3
-    q2 = vifelse(r == 1, MD2P13(T), Double(T(1)))
+    q2 = vifelse(r == 1, MD2P13(T), Double(V(1)))
     q2 = vifelse(r == 2, MD2P23(T), q2)
     q2 = flipsign(q2, d)
     d  = abs(d)

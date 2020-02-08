@@ -777,7 +777,7 @@ Compute the inverse tangent of `x`, where the output is in radians.
 end
 
 
-@inline function atan_fast_kernel(x::Float64)
+@inline function atan_fast_kernel(x::FloatType64)
     c19 = -1.88796008463073496563746e-05
     c18 =  0.000209850076645816976906797
     c17 = -0.00110611831486672482563471
@@ -812,6 +812,15 @@ end
     return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8))
 end
 
+
+@inline function atan_fast_q(x::Number)
+    I = fpinttype(eltype(x))
+    ifelse(signbit(x), 2 % I, zero(I))
+end
+@inline function atan_fast_q(x::SVec{W}) where {W}
+    I = fpinttype(eltype(x))
+    vifelse(signbit(x), vbroadcast(SVec{W,I}, 2 % I), vzero(SVec{W,I}))
+end
 """
     atan_fast(x)
 
@@ -820,7 +829,7 @@ Compute the inverse tangent of `x`, where the output is in radians.
 @inline function atan_fast(x::T) where {T<:FloatType}
     I = fpinttype(eltype(x))
 
-    q = vifelse(signbit(x), I(2), I(0))
+    q = atan_fast_q(x)
     x = abs(x)
 
     xg1 = x > one(I)
@@ -931,4 +940,7 @@ Compute the inverse cosine of `x`, where the output is in radians.
 """
 @inline function acos_fast(x::T) where {T<:Union{Float32,Float64}}
     flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), T(M_PI), T(0))
+end
+@inline function acos_fast(x::SVec{W,T}) where {W,T<:Union{Float32,Float64}}
+    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), vbroadcast(SVec{W,T}, T(M_PI)), vzero(SVec{W,T}))
 end

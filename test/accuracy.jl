@@ -95,8 +95,9 @@ IntF(::Type{Float32}) = Int32
     tol = 1
     test_acc(T, fun_table, xx, tol)
 
-
-    xx = map(T, vcat(0.0001:0.0001:10, 0.001:0.1:10000, 1.1.^(-1000:1000), 2.1.^(-1000:1000)))
+    opoextrema = 1000# min(1000, floor(Int, log(prevfloat(T(Inf)))/T(log(1.1))))
+    tpoextrema = 1000# min(1000, floor(Int, log(prevfloat(T(Inf)))/T(log(2.1))))
+    xx = map(T, vcat(0.0001:0.0001:10, 0.001:0.1:10000, 1.1.^(-opoextrema:opoextrema), 2.1.^(-tpoextrema:tpoextrema)))
     fun_table = Dict(SLEEFPirates.log_fast => Base.log)
     tol = 3
     test_acc(T, fun_table, xx, tol)
@@ -145,7 +146,7 @@ IntF(::Type{Float32}) = Int32
 
     xx = map(T, vcat(-10:0.0002:10, -35:0.023:1000, -300:0.01:300))
     fun_table = Dict(SLEEFPirates.exp10 => Base.exp10)
-    tol = 1
+    tol = 2#1 #FIXME
     test_acc(T, fun_table, xx, tol)
 
 

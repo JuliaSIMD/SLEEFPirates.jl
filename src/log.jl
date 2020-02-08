@@ -133,7 +133,7 @@ the natural expoenential function `exp(x)`
     s = dadd(s, x2*x.hi*t)
     r = V(s)
 
-    # r = vifelse(isinf(d), T(Inf), r)
+    r = vifelse(isinf(d), T(Inf), r)
     r = vifelse((d < 0) | isnan(d), T(NaN), r)
     r = vifelse(d == 0, T(-Inf), r)
 
@@ -233,7 +233,7 @@ the natural expoenential function `exp(x)`
 
     x = x * t + T(MLN2) * e
 
-    # x = vifelse(isinf(d), T(Inf), x)
+    x = vifelse(isinf(d), T(Inf), x)
     x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
     x = vifelse(d == zero(I), T(-Inf), x)
 
@@ -256,9 +256,9 @@ function log_fast_noinline(d::FloatType)
 
     x = x * t + T(MLN2) * e
 
-    # x = vifelse(isinf(d), T(Inf), x)
-    # x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
-    # x = vifelse(d == zero(I), T(-Inf), x)
+    x = vifelse(isinf(d), T(Inf), x)
+    x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
+    x = vifelse(d == zero(I), T(-Inf), x)
 
     return x
 end

@@ -56,8 +56,8 @@ Compute the base-`2` exponential of `x`, that is `2ˣ`.
 
     u = ldexp2k(u, qi)
 
-#    u = vifelse(d > max_exp2(T), T(Inf), u)
-#    u = vifelse(d < min_exp2(T), T(0.0), u)
+   u = vifelse(d > max_exp2(T), T(Inf), u)
+   u = vifelse(d < min_exp2(T), T(0.0), u)
 
     return u
 end
@@ -134,8 +134,8 @@ Compute `eˣ- 1` accurately for small values of `x`.
     T = eltype(x)
     v = dadd2(expk2(Double(x)), -T(1.0))
     u = v.hi + v.lo
-    # u = vifelse(x > max_expm1(T), T(Inf), u)
-    # u = vifelse(x < min_expm1(T), T(-1.0), u)
+    u = vifelse(x > max_expm1(T), T(Inf), u)
+    u = vifelse(x < min_expm1(T), T(-1.0), u)
     # u = vifelse(isnegzero(x), T(-0.0), u)
     return u
 end
@@ -208,8 +208,8 @@ function exp_noinline(d::FloatType)
     u = s * s * u + s + one(I)
     u = ldexp2k(u, qi)
 
-    # u = vifelse(d > max_exp(T), T(Inf), u)
-    # u = vifelse(d < min_exp(T), T(0), u)
+    u = vifelse(d > max_exp(T), T(Inf), u)
+    u = vifelse(d < min_exp(T), T(0), u)
 
     return u
 end
