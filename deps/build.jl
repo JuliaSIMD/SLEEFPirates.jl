@@ -26,7 +26,7 @@ function create_svmlwrap_file(mveclib)
                 if VERSION >= v"1.1"
                     sym = dlsym(lib, func, throw_error = false)
                 else
-                    sym = dlsym_e(lib, func, throw_error = false)
+                    sym = dlsym_e(lib, func)
                 end
                 if sym != C_NULL
                     typ = "Float$(isdouble ? 64 : 32)"
@@ -49,7 +49,7 @@ function create_svmlwrap_file(mveclib)
                     if VERSION >= v"1.1"
                         sym = dlsym(lib, func, throw_error = false)
                     else
-                        sym = dlsym_e(lib, func, throw_error = false)
+                        sym = dlsym_e(lib, func)
                     end
                     if sym != C_NULL
                         typ = "Float$(isdouble ? 64 : 32)"
