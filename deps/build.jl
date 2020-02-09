@@ -23,7 +23,11 @@ function create_svmlwrap_file(mveclib)
             for isdouble ∈ (true,false)
                 ts = s >> (2 + isdouble)
                 func = Symbol(:_ZGV, l, :N, ts, :v_, f, isdouble ? Symbol("") : :f)
-                sym = dlsym(lib, func, throw_error = false)
+                if VERSION >= v"1.1"
+                    sym = dlsym(lib, func, throw_error = false)
+                else
+                    sym = dlsym_e(lib, func, throw_error = false)
+                end
                 if sym != C_NULL
                     typ = "Float$(isdouble ? 64 : 32)"
                     vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
@@ -42,7 +46,11 @@ function create_svmlwrap_file(mveclib)
                 for isdouble ∈ (true,false)
                     ts = s >> (2 + isdouble)
                     func = Symbol(:_ZGV, l, :N, ts, :vv_, f, isdouble ? Symbol("") : :f)
-                    sym = dlsym(lib, func, throw_error = false)
+                    if VERSION >= v"1.1"
+                        sym = dlsym(lib, func, throw_error = false)
+                    else
+                        sym = dlsym_e(lib, func, throw_error = false)
+                    end
                     if sym != C_NULL
                         typ = "Float$(isdouble ? 64 : 32)"
                         vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
