@@ -139,32 +139,6 @@ the natural expoenential function `exp(x)`
 
     return r
 end
-function log_noinline(d::V) where {V <: FloatType}
-    T = eltype(d)
-    I = fpinttype(T)
-    o = d < floatmin(T)
-    d = vifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
-
-    e = ilogb2k(d * T(1.0/0.75))
-    m = ldexp3k(d, -e)
-    e = vifelse(o, e - I(64), e)
-
-    x  = ddiv(dadd2(T(-1.0), m), dadd2(T(1.0), m))
-    x2 = x.hi*x.hi
-
-    t = log_kernel(x2)
-
-    s = dmul(MDLN2(T), convert(V,e))
-    s = dadd(s, scale(x, T(2.0)))
-    s = dadd(s, x2*x.hi*t)
-    r = V(s)
-
-    # r = vifelse(isinf(d), T(Inf), r)
-    # r = vifelse((d < 0) | isnan(d), T(NaN), r)
-    # r = vifelse(d == 0, T(-Inf), r)
-
-    return r
-end
 
 
 
@@ -239,54 +213,4 @@ the natural expoenential function `exp(x)`
 
     return x
 end
-function log_fast_noinline(d::FloatType)
-    T = eltype(d)
-    I = fpinttype(T)
-    o = d < floatmin(T)
-    d = vifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
 
-    e = ilogb2k(d * T(1.0/0.75))
-    m = ldexp3k(d, -e)
-    e = vifelse(o, e - I(64), e)
-
-    x  = (m - one(I)) / (m + one(I))
-    x2 = x * x
-
-    t = log_fast_kernel(x2)
-
-    x = x * t + T(MLN2) * e
-
-    x = vifelse(isinf(d), T(Inf), x)
-    x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
-    x = vifelse(d == zero(I), T(-Inf), x)
-
-    return x
-end
-
-# function log_fast_debug(d::SIMDPirates.SVec)
-#     d1 = d[1]
-#     T = eltype(d)
-#     I = fpinttype(T)
-#     o = d < floatmin(T)
-#     d = vifelse(o, fm(fm(d * T(Int64(1) << 32)) * T(Int64(1) << 32)), d)
-#     d1 = vifelse(o[1], d1 * T(Int64(1) << 32) * T(Int64(1) << 32), d1)
-#     @show d[1], d1
-#     e = ilogb2k(d * T(1.0/0.75))
-#     e1 = ilogb2k(d1 * T(1.0/0.75))
-#     @show e[1], e1
-#     m = ldexp3k(d, -e)
-#     e = vifelse(o, e - I(64), e)
-#
-#     x  = (m - one(I)) / (m + one(I))
-#     x2 = fm(x * x)
-#
-#     t = log_fast_kernel(x2)
-#
-#     x = fm(x * t) + fm(T(MLN2) * e)
-#
-#     x = vifelse(isinf(d), T(Inf), x)
-#     x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
-#     x = vifelse(d == zero(I), T(-Inf), x)
-#
-#     return x
-# end

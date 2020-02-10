@@ -88,6 +88,22 @@ end
 
 strip_module_name(f::Function) = last(split(string(f), '.')) # strip module name from function f
 
+function test_vector(xfun, fun, ::Val{W}, x1::T) where {W,T<:Number}
+    offset = x1 < 1 ? 0 : 1
+    vxes1 = SVec(ntuple(w -> Core.VecElement{T}(offset + w / (W + 1)), Val(W)))
+    v1 = xfun(vxes1)
+    t2 = ntuple(w -> T(fun(offset + big(w) / (W + 1))), Val(W))
+    t1 = ntuple(w -> v1[w], Val(W))
+    @test all(t1 .≈ t2)
+end
+function test_vector(xfun, fun, ::Val{W}, ::NTuple{N,T}) where {W,N,T}
+    vxes1 = ntuple(i -> SVec(ntuple(w -> Core.VecElement{T}(w + i), Val(W))), Val(N))
+    v1 = xfun(vxes1...)
+    t2 = ntuple(w -> T(fun(ntuple(n -> big(n)+w, Val(N))...)), Val(W))
+    t1 = ntuple(w -> v1[w], length(v1))
+    @test all(t1 .≈ t2)
+end
+
 # test the accuracy of a function where fun_table is a Dict mapping the function you want
 # to test to a reference function
 # xx is an array of values (which may be tuples for multiple arugment functions)
@@ -122,20 +138,8 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
         # Vector test is mostly to make sure that they do not error
         # Results should either be the same as scalar
         # Or they're from another library (e.g., GLIBC), and may differ slighlty
-        W = VectorizationBase.pick_vector_width(T)
-        nargs = length(first(xx))
-        if nargs == 1
-            offset = first(xx) < 1 ? 0 : 1
-            vxes1 = SVec(ntuple(w -> Core.VecElement{T}(offset + w / (W + 1)), W))
-            v1 = xfun(vxes1)
-            t2 = ntuple(w -> T(fun(offset + big(w) / (W + 1))), W)
-        else
-            vxes1 = ntuple(i -> SVec(ntuple(w -> Core.VecElement{T}(w + i), Val(W))), nargs)
-            v1 = xfun(vxes1...)
-            t2 = ntuple(w -> T(fun(ntuple(n -> big(n)+w, nargs)...)), W)
-        end
-        t1 = ntuple(w -> v1[w], length(v1))
-        @test all(t1 .≈ t2)
+        test_vector(xfun, fun, VectorizationBase.pick_vector_width_val(T), first(xx))
+        test_vector(xfun, fun, Val(6), first(xx))
     end
 end
 
