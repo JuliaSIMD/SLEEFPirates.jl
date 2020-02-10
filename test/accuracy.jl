@@ -85,15 +85,15 @@ IntF(::Type{Float32}) = Int32
     xx2 = map(Tuple{T,T}, [zip(-10:0.051:10, -10:0.052:10)...])
     xx3 = map(Tuple{T,T}, [zip(-100:0.51:100, -100:0.51:100)...])
     xx4 = map(Tuple{T,T}, [zip(-100:0.51:100, -100:0.52:100)...])
-    xx = vcat(xx1, xx2, xx3, xx4)
+    txx = vcat(xx1, xx2, xx3, xx4)
 
     fun_table = Dict(SLEEFPirates.atan_fast => Base.atan)
     tol = 2.5
-    test_acc(T, fun_table, xx, tol)
+    test_acc(T, fun_table, txx, tol)
 
     fun_table = Dict(SLEEFPirates.atan => Base.atan)
     tol = 1
-    test_acc(T, fun_table, xx, tol)
+    test_acc(T, fun_table, txx, tol)
 
     opoextrema = 1000# min(1000, floor(Int, log(prevfloat(T(Inf)))/T(log(1.1))))
     tpoextrema = 1000# min(1000, floor(Int, log(prevfloat(T(Inf)))/T(log(2.1))))
@@ -122,10 +122,10 @@ IntF(::Type{Float32}) = Int32
     xx1 = map(Tuple{T,T}, [(x,y) for x = -100:0.20:100, y = 0.1:0.20:100])[:]
     xx2 = map(Tuple{T,T}, [(x,y) for x = -100:0.21:100, y = 0.1:0.22:100])[:]
     xx3 = map(Tuple{T,T}, [(x,y) for x = 2.1, y = -1000:0.1:1000])
-    xx = vcat(xx1, xx2, xx2)
+    txx = vcat(xx1, xx2, xx2)
     fun_table = Dict(SLEEFPirates.pow => Base.:^)
     tol = 1
-    test_acc(T, fun_table, xx, tol)
+    test_acc(T, fun_table, txx, tol)
 
 
     xx = map(T, vcat(-10000:0.2:10000, 1.1.^(-1000:1000), 2.1.^(-1000:1000)))

@@ -97,6 +97,9 @@ function test_vector(xfun, fun, ::Val{W}, x1::T) where {W,T<:Number}
     @test all(t1 .≈ t2)
 end
 function test_vector(xfun, fun, ::Val{W}, ::NTuple{N,T}) where {W,N,T}
+    if VERSION < v"1.3" && !ispow2(W)
+        return
+    end
     vxes1 = ntuple(i -> SVec(ntuple(w -> Core.VecElement{T}(w + i), Val(W))), Val(N))
     v1 = xfun(vxes1...)
     t2 = ntuple(w -> T(fun(ntuple(n -> big(n)+w, Val(N))...)), Val(W))
@@ -139,9 +142,7 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
         # Results should either be the same as scalar
         # Or they're from another library (e.g., GLIBC), and may differ slighlty
         test_vector(xfun, fun, VectorizationBase.pick_vector_width_val(T), first(xx))
-        if VERSION >= v"1.3"
-            test_vector(xfun, fun, Val(6), first(xx))
-        end
+        test_vector(xfun, fun, Val(6), first(xx))
     end
 end
 
