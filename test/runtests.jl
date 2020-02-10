@@ -139,7 +139,9 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
         # Results should either be the same as scalar
         # Or they're from another library (e.g., GLIBC), and may differ slighlty
         test_vector(xfun, fun, VectorizationBase.pick_vector_width_val(T), first(xx))
-        test_vector(xfun, fun, Val(6), first(xx))
+        if VERSION >= v"1.3"
+            test_vector(xfun, fun, Val(6), first(xx))
+        end
     end
 end
 
