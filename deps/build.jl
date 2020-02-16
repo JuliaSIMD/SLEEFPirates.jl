@@ -17,10 +17,11 @@ function create_svmlwrap_file(mveclib)
     lib = dlopen(mveclib)
     file = ["const MVECLIB = \"$mveclib\""]
     sizes = [(:b,16),(:d,32),(:e,64)]
-    for f ∈ [:log, :exp, :sin, :cos]
+    for f ∈ [:exp, :sin, :cos, :log]
         for (l,s) ∈ sizes
             s > REGISTER_SIZE && continue
             for isdouble ∈ (true,false)
+                isdouble && f === :log && s == 64 && continue # skip log on avx512, to prefer use sleef version.
                 ts = s >> (2 + isdouble)
                 func = Symbol(:_ZGV, l, :N, ts, :v_, f, isdouble ? Symbol("") : :f)
                 if VERSION >= v"1.1"

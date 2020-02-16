@@ -5,6 +5,8 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 using SIMDPirates
 using SIMDPirates: vifelse, vzero
 
+export SVec, loggamma
+
 const FloatType64 = Union{Float64,SVec{<:Any,Float64}}
 const FloatType32 = Union{Float32,SVec{<:Any,Float32}}
 const FloatType = Union{FloatType64,FloatType32}
@@ -116,7 +118,10 @@ include("trig.jl")   # trigonometric and inverse trigonometric functions
 include("hyp.jl")    # hyperbolic and inverse hyperbolic functions
 include("misc.jl")   # miscallenous math functions including pow and cbrt
 include("svmlwrap.jl")
-
+include("lgamma.jl")
+if SIMDPirates.VectorizationBase.REGISTER_SIZE == 64
+    include("sleef.jl")
+end
 # fallback definitions
 
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
