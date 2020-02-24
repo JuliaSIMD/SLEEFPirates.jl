@@ -1,7 +1,7 @@
 name = "SLEEFPirates"
 uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
 authors = ["chriselrod <elrodc@gmail.com>"]
-version = "0.3.7"
+version = "0.3.8"
 
 [deps]
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -9,7 +9,7 @@ SIMDPirates = "21efa798-c60a-11e8-04d3-e1a92915a26a"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
 [compat]
-SIMDPirates = "~0.3.15"
+SIMDPirates = "~0.3.15, 0.4"
 VectorizationBase = "~0.4"
 julia = "1"
 

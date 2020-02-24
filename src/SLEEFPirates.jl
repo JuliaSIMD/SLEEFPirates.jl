@@ -5,7 +5,7 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 using SIMDPirates
 using SIMDPirates: vifelse, vzero, AbstractStructVec
 
-export SVec, loggamma, logit, invlogit, nlogit, ninvlogit
+export SVec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
 
 const FloatType64 = Union{Float64,SVec{<:Any,Float64}}
 const FloatType32 = Union{Float32,SVec{<:Any,Float32}}
@@ -193,7 +193,9 @@ end
 @inline ninvlogit(x::SIMDPirates.Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x)))
 @inline SIMDPirates.vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
 @inline SIMDPirates.vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
-
+@inline log1m(x) = Base.log(Base.FastMath.sub_fast(one(x), x))
+@inline log1m(v::Vec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
+@inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
 
 include("precompile.jl")
 _precompile_()
