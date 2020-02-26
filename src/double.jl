@@ -11,6 +11,14 @@ end
 @inline function Double(x::SIMDPirates.SVec, y::SIMDPirates.SVec)
     Double(SVec(SIMDPirates.extract_data(x)), SVec(SIMDPirates.extract_data(y)))
 end
+@inline SIMDPirates.promote_vtype(::Type{Mask{W,U}}, ::Type{Double{V}}) where {W, U, T, V <: SIMDPirates.AbstractSIMDVector{W,T}} = Double{V}
+@inline SIMDPirates.promote_vtype(::Type{Double{V}}, ::Type{Mask{W,U}}) where {W, U, T, V <: SIMDPirates.AbstractSIMDVector{W,T}} = Double{V}
+@inline SIMDPirates.promote_vtype(::Type{Mask{W,U}}, ::Type{Double{T}}) where {W, U, T <: Number} = Double{SVec{W,T}}
+@inline SIMDPirates.promote_vtype(::Type{Double{T}}, ::Type{Mask{W,U}}) where {W, U, T <: Number} = Double{SVec{W,T}}
+@inline SIMDPirates.vconvert(::Type{Double{V}}, v::SVec) where {W,T,V <: SIMDPirates.AbstractSIMDVector{W,T}} = Double(vconvert(V, v), vzero(V))
+@inline SIMDPirates.vconvert(::Type{Double{V}}, v::V) where {V <: SIMDPirates.AbstractSIMDVector} = Double(v, vzero(V))
+@inline SIMDPirates.vconvert(::Type{Double{V}}, m::Mask) where {V} = m
+@inline SIMDPirates.vconvert(::Type{Double{V}}, d::Double{T}) where {W,T,V<:SIMDPirates.AbstractSIMDVector{W,T}} = Double(vbroadcast(V, d.hi), vbroadcast(V, d.lo))
 
 (::Type{T})(x::Double{T}) where {T<:vIEEEFloat} = x.hi + x.lo
 
@@ -19,6 +27,7 @@ end
     T
 end
 @inline SIMDPirates.vifelse(u::Unsigned, v1::Double, v2::Double) = Double(vifelse(u, v1.hi, v2.hi), vifelse(u, v1.lo, v2.lo))
+@inline SIMDPirates.vifelse(u::Mask, v1::Double, v2::Double) = Double(vifelse(u.u, v1.hi, v2.hi), vifelse(u.u, v1.lo, v2.lo))
 
 @inline trunclo(x::Float64) = reinterpret(Float64, reinterpret(UInt64, x) & 0xffff_ffff_f800_0000) # clear lower 27 bits (leave upper 26 bits)
 @inline trunclo(x::Float32) = reinterpret(Float32, reinterpret(UInt32, x) & 0xffff_f000) # clear lowest 12 bits (leave upper 12 bits)
