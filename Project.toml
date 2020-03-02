@@ -9,7 +9,7 @@ SIMDPirates = "21efa798-c60a-11e8-04d3-e1a92915a26a"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
 [compat]
-SIMDPirates = "~0.6"
+SIMDPirates = "~0.6.5"
 VectorizationBase = "~0.6.1,0.7"
 julia = "1"
 
