@@ -134,6 +134,7 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
         @inline $func(x::SIMDPirates.AbstractSIMDVector) = $func(SVec(extract_data(x)))
         @inline $func(v::SVec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(SVec{W,Float64}, v))
         @inline $func(v::SVec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(SVec{W,Float32}, v))
+        @inline $func(i::_MM) = $func(SIMDPirates.svrange(i))
     end
 end
 Tπ(::Type{T}) where {T} = promote_type(T, typeof(π))(π)
@@ -145,6 +146,7 @@ for func ∈ (:sin, :cos)
     @eval @inline Base.$funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
     @eval @inline $funcpifast(v::SIMDPirates.SVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
     @eval @inline $funcpi(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(Val{W}(), Tπ(T)), v))))
+    @eval @inline $funcpi(i::_MM) = $funcpi(SIMDPirates.svrange(i))
     @eval @inline $funcpifast(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(Val{W}(), Tπ(T)), v))))
 end
 @inline sincospi(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
@@ -152,10 +154,12 @@ end
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
     @eval @inline Base.$func(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
+    @eval @inline Base.$func(x::_MM) = $func(x)
 end
 for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
     func_fast = Symbol(func, :_fast)
     @eval @inline Base.$func(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
+    @eval @inline Base.$func(x::_MM) = $func_fast(x)
 end
 
 for func in (:atan, :hypot, :pow)
@@ -167,10 +171,10 @@ for func in (:atan, :hypot, :pow)
         @inline $func(x::SIMDPirates.Vec, y::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x), SVec(y)))
         @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::SIMDPirates.Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.SVec(y))
         @inline Base.$func2(x::SIMDPirates.Vec{W,T}, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.SVec(x), y)
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.vbroadcast(SIMDPirates.SVec{W,T},y))
-        @inline Base.$func2(x::T, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.vbroadcast(SIMDPirates.SVec{W,T},x), y)
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, SIMDPirates.vbroadcast(SIMDPirates.SVec{W,T1},T1(y)))
-        @inline Base.$func2(x::T2, y::SIMDPirates.AbstractStructVec{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(SIMDPirates.vbroadcast(SIMDPirates.SVec{W,T1},T1(x)), y)
+        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.vconvert(SIMDPirates.SVec{W,T},y))
+        @inline Base.$func2(x::T, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.vconvert(SIMDPirates.SVec{W,T},x), y)
+        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, SIMDPirates.vconvert(SIMDPirates.SVec{W,T1},T1(y)))
+        @inline Base.$func2(x::T2, y::SIMDPirates.AbstractStructVec{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(SIMDPirates.vconvert(SIMDPirates.SVec{W,T1},T1(x)), y)
         @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
         @inline $func(v1::SVec{W,I}, v2::SVec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(SVec{W,Float64}, v1), vconvert(SVec{W,Float64}, v2))
         @inline $func(v1::SVec{W,I}, v2::SVec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(SVec{W,Float32}, v1), vconvert(SVec{W,Float32}, v2))
