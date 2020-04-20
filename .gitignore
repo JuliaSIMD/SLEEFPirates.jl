@@ -10,3 +10,4 @@ tests/#*#
 *.mem
 src/svmlwrap.jl
 deps/build.log
+Manifest.toml
