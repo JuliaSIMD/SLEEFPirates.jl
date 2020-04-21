@@ -208,6 +208,21 @@ end
 @inline log1m(v::Vec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
 @inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
 
+"""
+    register(;fast = false)
+
+Register functions in `SLEEFPirates.jl` into `Base`. If `fast` is `true`, register faster variants if exist.
+"""
+function register(;fast = false)
+    for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
+        @eval Base.$func(x::Union{Float32, Float64}) = $func(x)
+    end
+    for func in (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt)
+        fastfunc = fast ? Symbol(string(func) * "_fast") : func
+        @eval Base.$func(x::Union{Float32, Float64}) = $fastfunc(x)
+    end
+end
+
 include("precompile.jl")
 _precompile_()
 
