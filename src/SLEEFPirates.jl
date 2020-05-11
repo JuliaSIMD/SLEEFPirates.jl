@@ -23,12 +23,6 @@ function fpinttype(::Type{SVec{N,Float32}}) where {N}
     SVec{N,Int32}
 end
 
-@generated function Base.unsafe_trunc(::Type{I}, x::SVec{N,T}) where {N,T,I}
-    quote
-        $(Expr(:meta,:inline))
-        SVec{$N,$I}($(Expr(:tuple, [:(Core.VecElement(unsafe_trunc($I, x[$n]))) for n ∈ 1:N]...)))
-    end
-end
 
 ## constants
 

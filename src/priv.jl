@@ -55,21 +55,13 @@ end
     )
 end
 
-@generated function ldexp3k(x::T, e::Integer) where {T<:Union{Float32,Float64}}
+@inline function ldexp3k(x::T, e::Integer) where {T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
-    quote
-        $(Expr(:meta,:inline))
-        reinterpret($T, reinterpret($UT, x) + ((reinterpret($UT,e) << $(significand_bits(T))) % $UT))
-    end
+    reinterpret(T, reinterpret(UT, x) + (((e % UT) << significand_bits(T)) % UT))
 end
-@generated function ldexp3k(x::SVec{N,T}, e::IntegerType) where {N,T<:Union{Float32,Float64}}
+@inline function ldexp3k(x::SVec{W,T}, e::IntegerType) where {W,T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
-    quote
-        $(Expr(:meta,:inline))
-        @inbounds reinterpret(SVec{$N,$T}, reinterpret(SVec{$N,$UT}, x) +
-            SVec{$N,$UT}($(Expr(:tuple, [:((reinterpret($UT, e[$n]) << $(UT(significand_bits(T)))) % $UT) for n ∈ 1:N]...)))
-        )
-    end
+    reinterpret(SVec{W,T}, reinterpret(SVec{W,UT}, x) + (((e % UT) << significand_bits(T)) % UT))
 end
 
 # threshold values for `ilogbk`
