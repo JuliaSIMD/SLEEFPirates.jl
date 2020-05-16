@@ -140,7 +140,7 @@ end
 
 Compute the hypotenuse `\\sqrt{x^2+y^2}` avoiding overflow and underflow.
 """
-function hypot(x::T, y::T) where {T<:vIEEEFloat}
+@inline function hypot(x::T, y::T) where {T<:vIEEEFloat}
     a = abs(x)
     b = abs(y)
 
