@@ -113,6 +113,7 @@ end
 # tol is the acceptable tolerance to test against
 function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
     @testset "accuracy $(strip_module_name(xfun))" for (xfun, fun) in fun_table
+
         rmax = 0.0
         rmean = 0.0
         xmax = map(zero, first(xx))
@@ -148,6 +149,7 @@ end
 
 function runtests()
     @testset "SLEEFPirates" begin
+        @test isempty(detect_unbound_args(SLEEFPirates))
         # include("exceptional.jl")
         include("accuracy.jl")
     end

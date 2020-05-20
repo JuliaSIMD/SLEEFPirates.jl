@@ -3,7 +3,7 @@ module SLEEFPirates
 using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
 using SIMDPirates
-using SIMDPirates: vifelse, vzero, AbstractStructVec
+using SIMDPirates: vifelse, vzero, AbstractStructVec, _Vec
 
 export SVec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
 
@@ -139,12 +139,14 @@ for func ∈ (:sin, :cos)
     @eval @inline $funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
     @eval @inline Base.$funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
     @eval @inline $funcpifast(v::SIMDPirates.SVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline $funcpi(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(Val{W}(), Tπ(T)), v))))
+    @eval @inline $funcpi(v::SIMDPirates._Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
     @eval @inline $funcpi(i::_MM) = $funcpi(SIMDPirates.svrange(i))
-    @eval @inline $funcpifast(v::SIMDPirates.Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(Val{W}(), Tπ(T)), v))))
+    @eval @inline $funcpifast(v::SIMDPirates._Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
 end
-@inline sincospi(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-@inline sincospi_fast(v::SIMDPirates.AbstractSIMDVector{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+@inline sincospi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+@inline sincospi_fast(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+@inline sincospi(v::_Vec{W,T}) where {W,T} = sincos(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
+@inline sincospi_fast(v::_Vec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
     @eval @inline Base.$func(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
@@ -186,20 +188,20 @@ end
 end
 @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(1,x)))
 @inline logit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(log(SIMDPirates.vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
-@inline logit(x::SIMDPirates.Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x)))
+@inline logit(x::SIMDPirates._Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(x,vsub(vbroadcast(_Vec{W,T},one(T)),x)))
 @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(Base.FastMath.sub_fast(x))))
 @inline invlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
-@inline invlogit(x::SIMDPirates.Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
+@inline invlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(vsub(x))))
 @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(1,x), x))
 @inline nlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(log(SIMDPirates.vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
-@inline nlogit(x::SIMDPirates.Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x))
+@inline nlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(vsub(vbroadcast(_Vec{W,T},one(T)),x),x))
 @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(x)))
 @inline ninvlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
-@inline ninvlogit(x::SIMDPirates.Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x)))
+@inline ninvlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(x)))
 @inline SIMDPirates.vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
 @inline SIMDPirates.vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
 @inline log1m(x) = Base.log(Base.FastMath.sub_fast(one(x), x))
-@inline log1m(v::Vec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
+@inline log1m(v::SIMDPirates._Vec{W,T}) where {W,T} = log(vsub(vone(_Vec{W,T}), v))
 @inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
 
 """

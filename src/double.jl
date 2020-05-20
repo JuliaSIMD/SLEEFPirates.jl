@@ -126,7 +126,7 @@ end
 
 @inline dadd2(x::Double{<:vIEEEFloat}, y::vIEEEFloat) = dadd2(y, x)
 
-@inline function dadd2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) where {T<:vIEEEFloat}
+@inline function dadd2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
     s = x.hi + y.hi
     v = SIMDPirates.evsub(s, x.hi)
     smv = SIMDPirates.evsub(s, v)

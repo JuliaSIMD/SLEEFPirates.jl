@@ -34,11 +34,17 @@ const FMA_FAST = true#is_fma_fast(Float64) && is_fma_fast(Float32)
     @inline function float2integer(d::SVec{W,Float64}) where {W}
         (reinterpret(SVec{W,Int64}, d) >> significand_bits(Float64))
     end
-    @inline function integer2float(::Type{<:Union{SVec{W,Float32},Float32}}, m::Int) where {W}
+    @inline function integer2float(::Type{SVec{W,Float32}}, m::Int) where {W}
+        reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
+    end
+    @inline function integer2float(::Type{Float32}, m::Int)
         reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
     end
 else
-    @inline function integer2float(::Type{<:Union{SVec{W,Float64},Float64}}, m::SVec{W,Int}) where {W}
+    @inline function integer2float(::Type{Float64}, m::SVec{W,Int}) where {W}
+        reinterpret(SVec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
+    end
+    @inline function integer2float(::Type{SVec{W,Float64}}, m::SVec{W,Int}) where {W}
         reinterpret(SVec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
     end
     @inline function float2integer(d::SVec{W,Float64}) where {W}

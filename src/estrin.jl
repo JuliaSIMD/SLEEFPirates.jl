@@ -1,5 +1,5 @@
 
-@generated function estrin(x, p::NTuple{N,T}) where {T,N}
+@generated function estrin(x, p::NTuple{N}) where {N}
     # N = length(p)
     # log2N = VectorizationBase.intlog2(N)
     ex = quote $(Expr(:meta,:inline)) end
