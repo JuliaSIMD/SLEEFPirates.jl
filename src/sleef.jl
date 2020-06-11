@@ -201,6 +201,140 @@ declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
   %34 = fcmp olt <8 x double> %0, <double -1.000000e+03, double -1.000000e+03, double -1.000000e+03, double -1.000000e+03, double -1.000000e+03, double -1.000000e+03, double -1.000000e+03, double -1.000000e+03>
   %35 = select <8 x i1> %34, <8 x double> zeroinitializer, <8 x double> %33
   ret <8 x double> %35
- """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
+p """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
 end
 @inline expversion2(v::SVec{8,Float64}) = SVec(expversion2(extract_data(v)))
+
+
+@inline function log1p(v::Vec{8,Float64})
+    Base.llvmcall(("""
+declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
+""","""
+  %2 = fadd <8 x double> %0, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+  %3 = fcmp one <8 x double> %2, zeroinitializer
+  %4 = bitcast <8 x double> %2 to <8 x i64>
+  %5 = lshr <8 x i64> %4, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %6 = add nuw nsw <8 x i64> %5, <i64 614242, i64 614242, i64 614242, i64 614242, i64 614242, i64 614242, i64 614242, i64 614242>
+  %7 = lshr <8 x i64> %6, <i64 20, i64 20, i64 20, i64 20, i64 20, i64 20, i64 20, i64 20>
+  %8 = add nsw <8 x i64> %7, <i64 -1023, i64 -1023, i64 -1023, i64 -1023, i64 -1023, i64 -1023, i64 -1023, i64 -1023>
+  %9 = icmp ugt <8 x i64> %4, <i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767, i64 4613551468752928767>
+  %10 = fsub <8 x double> %2, %0
+  %11 = fsub <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %10
+  %12 = fadd <8 x double> %2, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+  %13 = fsub <8 x double> %0, %12
+  %14 = select <8 x i1> %9, <8 x double> %11, <8 x double> %13
+  %15 = fdiv <8 x double> %14, %2
+  %16 = shl <8 x i64> %6, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %17 = and <8 x i64> %16, <i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200>
+  %18 = add nuw nsw <8 x i64> %17, <i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776>
+  %19 = and <8 x i64> %4, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %20 = or <8 x i64> %18, %19
+  %21 = bitcast <8 x i64> %20 to <8 x double>
+  %22 = fadd <8 x double> %21, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+  %23 = fmul <8 x double> %22, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  %24 = fmul <8 x double> %22, %23
+  %25 = fadd <8 x double> %22, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %26 = fdiv <8 x double> %22, %25
+  %27 = fmul <8 x double> %26, %26
+  %28 = fmul <8 x double> %27, %27
+  %29 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> <double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F>, <8 x double> <double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF>) #16
+  %30 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %29, <8 x double> <double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04>) #16
+  %31 = fmul <8 x double> %28, %30
+  %32 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> <double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244>, <8 x double> <double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE>) #16
+  %33 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %32, <8 x double> <double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359>) #16
+  %34 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %33, <8 x double> <double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593>) #16
+  %35 = fmul <8 x double> %27, %34
+  %36 = fadd <8 x double> %31, %35
+  %37 = sitofp <8 x i64> %8 to <8 x double>
+  %38 = fadd <8 x double> %24, %36
+  %39 = fmul <8 x double> %37, <double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76>
+  %40 = fadd <8 x double> %15, %39
+  %41 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %26, <8 x double> %38, <8 x double> %40) #16
+  %42 = fsub <8 x double> %41, %24
+  %43 = fadd <8 x double> %22, %42
+  %44 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %37, <8 x double> <double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000>, <8 x double> %43) #16
+  %45 = fcmp oeq <8 x double> %0, <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %46 = select <8 x i1> %45, <8 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>, <8 x double> %44
+  %47 = select <8 x i1> %3, <8 x double> %46, <8 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000>
+  %48 = fcmp oge <8 x double> %2, zeroinitializer
+  %49 = bitcast <8 x i1> %48 to i8
+  %50 = xor i8 %49, -1
+  %51 = bitcast i8 %50 to <8 x i1>
+  %52 = select <8 x i1> %51, <8 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, <8 x double> %47
+  ret <8 x double> %52
+"""), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
+end
+
+# @inline function log1p(v::Vec{8,Float64})
+#     Base.llvmcall(("""
+# declare <8 x i64> @llvm.x86.avx512.mask.cvtpd2qq.512(<8 x double>, <8 x i64>, i8, i32)
+# declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
+# declare <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double>, <8 x double>, i8, i32)
+# ""","""
+#   %2 = fadd <8 x double> %0, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+#   %3 = fmul <8 x double> %2, <double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555, double 0x3FF5555555555555>
+#   %4 = tail call <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double> %3, <8 x double> zeroinitializer, i8 -1, i32 4) #13
+#   %5 = fcmp oeq <8 x double> %4, <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>
+#   %6 = select <8 x i1> %5, <8 x double> <double 1.024000e+03, double 1.024000e+03, double 1.024000e+03, double 1.024000e+03, double 1.024000e+03, double 1.024000e+03, double 1.024000e+03, double 1.024000e+03>, <8 x double> %4
+#   %7 = tail call <8 x i64> @llvm.x86.avx512.mask.cvtpd2qq.512(<8 x double> %6, <8 x i64> zeroinitializer, i8 -1, i32 8) #13
+#   %8 = sub <8 x i64> zeroinitializer, %7
+#   %9 = shl <8 x i64> %8, <i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52>
+#   %10 = add <8 x i64> %9, <i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408>
+#   %11 = bitcast <8 x i64> %10 to <8 x double>
+#   %12 = fadd <8 x double> %11, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+#   %13 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %0, <8 x double> %11, <8 x double> %12) #13
+#   %14 = fmul <8 x double> %6, <double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF>
+#   %15 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %14
+#   %16 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %6, <8 x double> <double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF, double 0x3FE62E42FEFA39EF>, <8 x double> %15) #13
+#   %17 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %6, <8 x double> <double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F, double 0x3C7ABC9E3B39803F>, <8 x double> %16) #13
+#   %18 = fadd <8 x double> %13, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+#   %19 = fsub <8 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, %18
+#   %20 = fadd <8 x double> %13, %19
+#   %21 = fdiv <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %18
+#   %22 = fmul <8 x double> %13, %21
+#   %23 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %22
+#   %24 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %21, <8 x double> %13, <8 x double> %23) #13
+#   %25 = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %21
+#   %26 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %18, <8 x double> %25, <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>) #13
+#   %27 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %20, <8 x double> %25, <8 x double> %26) #13
+#   %28 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %21, <8 x double> zeroinitializer, <8 x double> %24) #13
+#   %29 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %22, <8 x double> %27, <8 x double> %28) #13
+#   %30 = fmul <8 x double> %22, %22
+#   %31 = fmul <8 x double> %30, %30
+#   %32 = fmul <8 x double> %31, %31
+#   %33 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %30, <8 x double> <double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84, double 0x3FC3872E67FE8E84>, <8 x double> <double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035, double 0x3FC747353A506035>) #13
+#   %34 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %31, <8 x double> <double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E, double 0x3FC39C4F5407567E>, <8 x double> %33) #13
+#   %35 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %30, <8 x double> <double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E, double 0x3FCC71C0A65ECD8E>, <8 x double> <double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245, double 0x3FD249249A68A245>) #13
+#   %36 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %30, <8 x double> <double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA, double 0x3FD99999998F92EA>, <8 x double> <double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE, double 0x3FE55555555557AE>) #13
+#   %37 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %31, <8 x double> %35, <8 x double> %36) #13
+#   %38 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %32, <8 x double> %34, <8 x double> %37) #13
+#   %39 = fmul <8 x double> %22, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+#   %40 = fmul <8 x double> %29, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+#   %41 = fadd <8 x double> %14, %39
+#   %42 = fsub <8 x double> %14, %41
+#   %43 = fadd <8 x double> %39, %42
+#   %44 = fadd <8 x double> %17, %43
+#   %45 = fadd <8 x double> %40, %44
+#   %46 = fmul <8 x double> %22, %30
+#   %47 = fmul <8 x double> %46, %38
+#   %48 = fadd <8 x double> %41, %47
+#   %49 = fsub <8 x double> %41, %48
+#   %50 = fadd <8 x double> %47, %49
+#   %51 = fadd <8 x double> %45, %50
+#   %52 = fadd <8 x double> %48, %51
+#   %53 = fcmp ogt <8 x double> %0, <double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433, double 0x7FAC7B1F3CAC7433>
+#   %54 = select <8 x i1> %53, <8 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>, <8 x double> %52
+#   %55 = fcmp olt <8 x double> %0, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+#   %56 = fcmp uno <8 x double> %0, zeroinitializer
+#   %57 = or <8 x i1> %56, %55
+#   %58 = select <8 x i1> %57, <8 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0x7FF8000000000000>, <8 x double> %54
+#   %59 = fcmp oeq <8 x double> %0, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+#   %60 = select <8 x i1> %59, <8 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000>, <8 x double> %58
+#   %61 = bitcast <8 x double> %0 to <8 x i64>
+#   %62 = icmp eq <8 x i64> %61, <i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808>
+#   %63 = select <8 x i1> %62, <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, <8 x double> %60
+#   ret <8 x double> %63
+# """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
+# end
+
+

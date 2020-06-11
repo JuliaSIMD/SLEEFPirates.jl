@@ -204,9 +204,9 @@ end
 @inline ninvlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(x)))
 @inline SIMDPirates.vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
 @inline SIMDPirates.vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
-@inline log1m(x) = Base.log(Base.FastMath.sub_fast(one(x), x))
-@inline log1m(v::SIMDPirates._Vec{W,T}) where {W,T} = log(vsub(vone(_Vec{W,T}), v))
-@inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log(vsub(vone(Vec{W,T}), v))
+@inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
+@inline log1m(v::SIMDPirates._Vec{W,T}) where {W,T} = log1p(vsub(v))
+@inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log1p(vsub(v))
 
 """
     register(;fast = false)
