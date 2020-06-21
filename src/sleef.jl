@@ -337,7 +337,7 @@ end
 # """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
 # end
 
-@static if SIMDPirates.VectorizationBase.AVX512F
+@static if SIMDPirates.VectorizationBase.AVX512F && VERSION ≥ v"1.4"
 @inline function tanh(v::Vec{16,Float32})
     Base.llvmcall(("""
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float> )
@@ -403,6 +403,6 @@ declare <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float>, <16 x i32>,
   ret <16 x float> %51
 """), Vec{16,Float32}, Tuple{Vec{16,Float32}}, v)
 end
-@inline tanh(v::SVec{16,Float32}) = tanh(extract_data(v))
+@inline tanh(v::SVec{16,Float32}) = SVec(tanh(extract_data(v)))
 end # AVX512F
     
