@@ -111,10 +111,12 @@ include("log.jl")    # logarithmic functions
 include("trig.jl")   # trigonometric and inverse trigonometric functions
 include("hyp.jl")    # hyperbolic and inverse hyperbolic functions
 include("misc.jl")   # miscallenous math functions including pow and cbrt
-if isfile(joinpath(@__DIR__, "svmlwrap.jl"))
-    include("svmlwrap.jl")
-elseif Sys.islinux()
-    @warn "Building SLEEFPirates is likely to increase performance of some functions."
+if Int === Int64
+    if isfile(joinpath(@__DIR__, "svmlwrap.jl"))
+        include("svmlwrap.jl")
+    elseif Sys.islinux()
+        @warn "Building SLEEFPirates is likely to increase performance of some functions."
+    end
 end
 include("lgamma.jl")
 if SIMDPirates.VectorizationBase.REGISTER_SIZE == 64
