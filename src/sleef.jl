@@ -337,7 +337,7 @@ end
 # """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
 # end
 
-@static if SIMDPirates.VectorizationBase.AVX512F && VERSION ≥ v"1.4"
+@static if SIMDPirates.VectorizationBase.AVX512F && Base.libllvm_version ≥ v"9"
 @inline function tanh(v::Vec{16,Float32})
     Base.llvmcall(("""
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float> )
