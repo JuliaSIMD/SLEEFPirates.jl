@@ -337,72 +337,365 @@ end
 # """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
 # end
 
-@static if SIMDPirates.VectorizationBase.AVX512F && Base.libllvm_version ≥ v"9"
-@inline function tanh(v::Vec{16,Float32})
-    Base.llvmcall(("""
-declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float> )
-declare <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
-declare <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float>, <16 x i32>, i16, i32)
-""", """
-  %2 = bitcast <16 x float> %0 to <8 x i64>
-  %3 = and <8 x i64> %2, <i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159>
-  %4 = bitcast <8 x i64> %3 to <16 x float>
-  %5 = fcmp olt <16 x float> %4, <float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01>
-  %6 = bitcast <16 x i1> %5 to i16
-  %7 = bitcast <16 x float> %0 to <16 x i32>
-  %8 = and <16 x i32> %7, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
-  %9 = icmp eq i16 %6, 0
-  br i1 %9, label %20, label %10
+@static if Base.libllvm_version ≥ v"9"
+    @static if SIMDPirates.VectorizationBase.AVX & SIMDPirates.VectorizationBase.FMA
+        @inline function tanh(v::Vec{8,Float32})
+            Base.llvmcall(("""
+declare i32 @llvm.x86.avx.vtestz.ps.256(<8 x float>, <8 x float>) #16
+declare i32 @llvm.x86.avx.vtestc.ps.256(<8 x float>, <8 x float>) #16
+declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float> , <8 x float>) #16
+declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32)
+declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>) #16
+""","""
+  %2 = bitcast <8 x float> %0 to <8 x i32>
+  %3 = and <8 x i32> %2, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %4 = bitcast <8 x i32> %3 to <8 x float>
+  %5 = fcmp olt <8 x float> %4, <float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01>
+  %6 = sext <8 x i1> %5 to <8 x i32>
+  %7 = bitcast <8 x i32> %6 to <8 x float>
+  %8 = and <8 x i32> %2, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %9 = tail call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %7, <8 x float> %7) #16
+  %10 = icmp eq i32 %9, 0
+  br i1 %10, label %11, label %22
 
-10:                                               ; preds = %1
-  %11 = fmul <16 x float> %4, %4
-  %12 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> <float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000>, <16 x float> <float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000>) #16
-  %13 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %12, <16 x float> <float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000>) #16
-  %14 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %13, <16 x float> <float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000>) #16
-  %15 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %14, <16 x float> <float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000>) #16
-  %16 = fmul <16 x float> %11, %15
-  %17 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %16, <16 x float> %4, <16 x float> %4) #16
-  %18 = bitcast <16 x float> %17 to <16 x i32>
-  %19 = icmp eq i16 %6, -1
-  br i1 %19, label %48, label %20
+11:                                               ; preds = %1
+  %12 = fmul <8 x float> %4, %4
+  %13 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %12, <8 x float> <float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000>, <8 x float> <float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000>) #16
+  %14 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %12, <8 x float> %13, <8 x float> <float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000>) #16
+  %15 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %12, <8 x float> %14, <8 x float> <float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000>) #16
+  %16 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %12, <8 x float> %15, <8 x float> <float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000>) #16
+  %17 = fmul <8 x float> %16, %12
+  %18 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %17, <8 x float> %4, <8 x float> %4) #16
+  %19 = bitcast <8 x float> %18 to <8 x i32>
+  %20 = tail call i32 @llvm.x86.avx.vtestc.ps.256(<8 x float> %7, <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>) #16
+  %21 = icmp eq i32 %20, 0
+  br i1 %21, label %22, label %51
 
-20:                                               ; preds = %10, %1
-  %21 = phi <16 x i32> [ %18, %10 ], [ <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>, %1 ]
-  %22 = fadd <16 x float> %4, %4
-  %23 = fmul <16 x float> %22, <float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000>
-  %24 = tail call <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float> %23, i32 0, <16 x float> zeroinitializer, i16 -1, i32 4)
-  %25 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %24, <16 x float> <float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000>, <16 x float> %22) #16
-  %26 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %24, <16 x float> <float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000>, <16 x float> %25) #16
-  %27 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> <float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000>, <16 x float> <float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000>) #16
-  %28 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %27, <16 x float> <float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000>) #16
-  %29 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %28, <16 x float> <float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000>) #16
-  %30 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %29, <16 x float> <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>) #16
-  %31 = fmul <16 x float> %26, %26
-  %32 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %30, <16 x float> %31, <16 x float> %26) #16
-  %33 = fadd <16 x float> %32, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-  %34 = fcmp ole <16 x float> %22, <float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000>
-  %35 = tail call <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float> %24, <16 x i32> zeroinitializer, i16 -1, i32 4) #16
-  %36 = shl <16 x i32> %35, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
-  %37 = add <16 x i32> %36, <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>
-  %38 = bitcast <16 x i32> %37 to <16 x float>
-  %39 = fmul <16 x float> %33, %38
-  %40 = fcmp oge <16 x float> %22, <float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000>
-  %41 = fadd <16 x float> %39, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-  %42 = fdiv <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %41
-  %43 = select <16 x i1> %34, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> %42
-  %44 = select <16 x i1> %40, <16 x float> zeroinitializer, <16 x float> %43
-  %45 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %44, <16 x float> <float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00>, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>) #16
-  %46 = bitcast <16 x float> %45 to <16 x i32>
-  %47 = select <16 x i1> %5, <16 x i32> %21, <16 x i32> %46
-  br label %48
+22:                                               ; preds = %11, %1
+  %23 = phi <8 x i32> [ %19, %11 ], [ <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>, %1 ]
+  %24 = fmul <8 x float> %4, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %25 = fmul <8 x float> %4, <float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000, float 0x4007154760000000>
+  %26 = tail call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %25, i32 0)
+  %27 = fneg <8 x float> %26
+  %28 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %27, <8 x float> <float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000, float 0x3FE6300000000000>, <8 x float> %24) #16
+  %29 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %27, <8 x float> <float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000, float 0xBF2BD01060000000>, <8 x float> %28) #16
+  %30 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %29, <8 x float> <float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000>, <8 x float> <float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000>) #16
+  %31 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %29, <8 x float> %30, <8 x float> <float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000>) #16
+  %32 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %29, <8 x float> %31, <8 x float> <float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000>) #16
+  %33 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %29, <8 x float> %32, <8 x float> <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>) #16
+  %34 = fmul <8 x float> %29, %29
+  %35 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %33, <8 x float> %34, <8 x float> %29) #16
+  %36 = fadd <8 x float> %35, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  %37 = fcmp ole <8 x float> %24, <float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000>
+  %38 = tail call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %26) #16
+  %39 = shl <8 x i32> %38, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+  %40 = add <8 x i32> %39, <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>
+  %41 = bitcast <8 x i32> %40 to <8 x float>
+  %42 = fmul <8 x float> %36, %41
+  %43 = fcmp oge <8 x float> %24, <float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000>
+  %44 = fadd <8 x float> %42, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  %45 = fdiv <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %44
+  %46 = select <8 x i1> %37, <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <8 x float> %45
+  %47 = select <8 x i1> %43, <8 x float> zeroinitializer, <8 x float> %46
+  %48 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %47, <8 x float> <float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00>, <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>) #16
+  %49 = bitcast <8 x float> %48 to <8 x i32>
+  %50 = select <8 x i1> %5, <8 x i32> %23, <8 x i32> %49
+  br label %51
 
-48:                                               ; preds = %10, %20
-  %49 = phi <16 x i32> [ %47, %20 ], [ %18, %10 ]
-  %50 = xor <16 x i32> %49, %8
-  %51 = bitcast <16 x i32> %50 to <16 x float>
-  ret <16 x float> %51
-"""), Vec{16,Float32}, Tuple{Vec{16,Float32}}, v)
-end
-@inline tanh(v::SVec{16,Float32}) = SVec(tanh(extract_data(v)))
-end # AVX512F
+51:                                               ; preds = %11, %22
+  %52 = phi <8 x i32> [ %50, %22 ], [ %19, %11 ]
+  %53 = xor <8 x i32> %52, %8
+  %54 = bitcast <8 x i32> %53 to <8 x float>
+  ret <8 x float> %54
+"""), Vec{8,Float32}, Tuple{Vec{8,Float32}}, v)
+        end
+        @inline function tanh(v::Vec{4,Float64})
+            Base.llvmcall(("""
+    declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>) #16
+    declare i32 @llvm.x86.avx.vtestz.pd.256(<4 x double>, <4 x double>) #16
+    declare i32 @llvm.x86.avx.vtestc.pd.256(<4 x double>, <4 x double>) #16
+    declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32)
+    declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) #16
+    ""","""
+  %2 = bitcast <4 x double> %0 to <4 x i64>
+  %3 = and <4 x i64> %2, <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>
+  %4 = bitcast <4 x i64> %3 to <4 x double>
+  %5 = fcmp fast olt <4 x double> %4, <double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01>
+  %6 = sext <4 x i1> %5 to <4 x i64>
+  %7 = bitcast <4 x i64> %6 to <4 x double>
+  %8 = and <4 x i64> %2, <i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808>
+  %9 = tail call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %7, <4 x double> %7) #16
+  %10 = icmp eq i32 %9, 0
+  br i1 %10, label %11, label %23
+
+11:                                               ; preds = %1
+  %12 = fmul fast <4 x double> %4, %4
+  %13 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %12, <4 x double> <double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B>, <4 x double> <double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D>) #16
+  %14 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %12, <4 x double> %13, <4 x double> <double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563>) #16
+  %15 = fmul fast <4 x double> %14, %12
+  %16 = fadd fast <4 x double> %12, <double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86>
+  %17 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %12, <4 x double> %16, <4 x double> <double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA>) #16
+  %18 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %12, <4 x double> %17, <4 x double> <double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C>) #16
+  %19 = fdiv fast <4 x double> %15, %18
+  %20 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %19, <4 x double> %4, <4 x double> %4) #16
+  %21 = tail call i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %7, <4 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>) #16
+  %22 = icmp eq i32 %21, 0
+  br i1 %22, label %23, label %59
+
+23:                                               ; preds = %11, %1
+  %24 = phi <4 x double> [ %20, %11 ], [ <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %1 ]
+  %25 = fmul fast <4 x double> %4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %26 = fmul fast <4 x double> %4, <double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE>
+  %27 = tail call fast <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %26, i32 0)
+  %28 = fneg fast <4 x double> %27
+  %29 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %28, <4 x double> <double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000>, <4 x double> %25) #16
+  %30 = fmul fast <4 x double> %27, <double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76>
+  %31 = fsub fast <4 x double> %29, %30
+  %32 = fmul fast <4 x double> %31, %31
+  %33 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> <double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0>, <4 x double> <double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1>) #16
+  %34 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %33, <4 x double> <double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C>) #16
+  %35 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %34, <4 x double> <double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93>) #16
+  %36 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %35, <4 x double> <double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E>) #16
+  %37 = fneg fast <4 x double> %32
+  %38 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %37, <4 x double> %36, <4 x double> %31) #16
+  %39 = fmul fast <4 x double> %38, %31
+  %40 = fsub fast <4 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, %38
+  %41 = fdiv fast <4 x double> %39, %40
+  %42 = fsub fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %30
+  %43 = fadd fast <4 x double> %42, %29
+  %44 = fadd fast <4 x double> %43, %41
+  %45 = fcmp fast ole <4 x double> %25, <double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2>
+  %46 = tail call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %27) #16
+  %47 = zext <4 x i32> %46 to <4 x i64>
+  %48 = shl <4 x i64> %47, <i64 52, i64 52, i64 52, i64 52>
+  %49 = add <4 x i64> %48, <i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408>
+  %50 = bitcast <4 x i64> %49 to <4 x double>
+  %51 = fmul fast <4 x double> %44, %50
+  %52 = fcmp fast oge <4 x double> %25, <double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF>
+  %53 = fadd fast <4 x double> %51, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+  %54 = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %53
+  %55 = select <4 x i1> %45, <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> %54
+  %56 = select <4 x i1> %52, <4 x double> zeroinitializer, <4 x double> %55
+  %57 = tail call fast <4 x double> @llvm.fma.v4f64(<4 x double> %56, <4 x double> <double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00>, <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>) #16
+  %58 = select <4 x i1> %5, <4 x double> %24, <4 x double> %57
+  br label %59
+
+59:                                               ; preds = %11, %23
+  %60 = phi <4 x double> [ %58, %23 ], [ %20, %11 ]
+  %61 = bitcast <4 x double> %60 to <4 x i64>
+  %62 = xor <4 x i64> %8, %61
+  %63 = bitcast <4 x i64> %62 to <4 x double>
+  ret <4 x double> %63
+    """), Vec{4,Float64}, Tuple{Vec{4,Float64}}, v)
+        end
+
+        @inline function atanh(v::Vec{4,Float64})
+            Base.llvmcall(("""
+declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>) #16
+""","""
+  %2 = bitcast <4 x double> %0 to <4 x i64>
+  %3 = and <4 x i64> %2, <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>
+  %4 = bitcast <4 x i64> %3 to <4 x double>
+  %5 = fmul <4 x double> %4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+  %6 = fsub <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %4
+  %7 = fcmp olt <4 x double> %4, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  %8 = select <4 x i1> %7, <4 x double> %4, <4 x double> %5
+  %9 = fdiv <4 x double> %8, %6
+  %10 = and <4 x i64> %2, <i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808>
+  %11 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %5, <4 x double> %9, <4 x double> %5) #16
+  %12 = select <4 x i1> %7, <4 x double> %11, <4 x double> %9
+  %13 = fadd <4 x double> %12, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+  %14 = fcmp one <4 x double> %13, zeroinitializer
+  %15 = bitcast <4 x double> %13 to <4 x i64>
+  %16 = lshr <4 x i64> %15, <i64 32, i64 32, i64 32, i64 32>
+  %17 = add nuw nsw <4 x i64> %16, <i64 614242, i64 614242, i64 614242, i64 614242>
+  %18 = lshr <4 x i64> %17, <i64 20, i64 20, i64 20, i64 20>
+  %19 = add nsw <4 x i64> %18, <i64 -1023, i64 -1023, i64 -1023, i64 -1023>
+  %20 = shl <4 x i64> %17, <i64 32, i64 32, i64 32, i64 32>
+  %21 = and <4 x i64> %20, <i64 4503595332403200, i64 4503595332403200, i64 4503595332403200, i64 4503595332403200>
+  %22 = add nuw nsw <4 x i64> %21, <i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776, i64 4604544269498187776>
+  %23 = and <4 x i64> %15, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %24 = or <4 x i64> %22, %23
+  %25 = bitcast <4 x i64> %24 to <4 x double>
+  %26 = fadd <4 x double> %25, <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>
+  %27 = fmul <4 x double> %26, %26
+  %28 = fmul <4 x double> %27, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  %29 = fadd <4 x double> %25, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+  %30 = fdiv <4 x double> %26, %29
+  %31 = fmul <4 x double> %30, %30
+  %32 = fmul <4 x double> %31, %31
+  %33 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> <double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F, double 0x3FC39A09D078C69F>, <4 x double> <double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF, double 0x3FCC71C51D8E78AF>) #16
+  %34 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %33, <4 x double> <double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04, double 0x3FD999999997FA04>) #16
+  %35 = fmul <4 x double> %34, %32
+  %36 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> <double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244, double 0x3FC2F112DF3E5244>, <4 x double> <double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE, double 0x3FC7466496CB03DE>) #16
+  %37 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %36, <4 x double> <double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359, double 0x3FD2492494229359>) #16
+  %38 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %32, <4 x double> %37, <4 x double> <double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593, double 0x3FE5555555555593>) #16
+  %39 = fmul <4 x double> %38, %31
+  %40 = sitofp <4 x i64> %19 to <4 x double>
+  %41 = fadd <4 x double> %35, %28
+  %42 = fadd <4 x double> %41, %39
+  %43 = fmul <4 x double> %40, <double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76>
+  %44 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %30, <4 x double> %42, <4 x double> %43) #16
+  %45 = fsub <4 x double> %26, %28
+  %46 = fadd <4 x double> %45, %44
+  %47 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %40, <4 x double> <double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000, double 0x3FE62E42FEE00000>, <4 x double> %46) #16
+  %48 = fcmp oeq <4 x double> %12, <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>
+  %49 = fcmp ult <4 x double> %13, zeroinitializer
+  %50 = fmul <4 x double> %47, <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>
+  %51 = select <4 x i1> %48, <4 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>, <4 x double> %50
+  %52 = select <4 x i1> %14, <4 x double> %51, <4 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000, double 0xFFF0000000000000>
+  %53 = select <4 x i1> %49, <4 x double> <double 0x7FFFFFFFFFFFFFFF, double 0x7FFFFFFFFFFFFFFF, double 0x7FFFFFFFFFFFFFFF, double 0x7FFFFFFFFFFFFFFF>, <4 x double> %52
+  %54 = bitcast <4 x double> %53 to <4 x i64>
+  %55 = xor <4 x i64> %10, %54
+  %56 = bitcast <4 x i64> %55 to <4 x double>
+  ret <4 x double> %56
+"""), Vec{4,Float64}, Tuple{Vec{4,Float64}}, v)
+        end
+        @inline tanh(v::SVec{8,Float32}) = SVec(tanh(extract_data(v)))
+        @inline tanh(v::SVec{4,Float64}) = SVec(tanh(extract_data(v)))
+        
+    end # AVX
+    @static if SIMDPirates.VectorizationBase.AVX512F
+        @inline function tanh(v::Vec{16,Float32})
+            Base.llvmcall(("""
+    declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float> )
+    declare <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
+    declare <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float>, <16 x i32>, i16, i32)
+    """, """
+      %2 = bitcast <16 x float> %0 to <8 x i64>
+      %3 = and <8 x i64> %2, <i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159, i64 9223372034707292159>
+      %4 = bitcast <8 x i64> %3 to <16 x float>
+      %5 = fcmp olt <16 x float> %4, <float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01, float 6.250000e-01>
+      %6 = bitcast <16 x i1> %5 to i16
+      %7 = bitcast <16 x float> %0 to <16 x i32>
+      %8 = and <16 x i32> %7, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+      %9 = icmp eq i16 %6, 0
+      br i1 %9, label %20, label %10
+
+    10:                                               ; preds = %1
+      %11 = fmul <16 x float> %4, %4
+      %12 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> <float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000, float 0xBF775E1D40000000>, <16 x float> <float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000, float 0x3F952269C0000000>) #16
+      %13 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %12, <16 x float> <float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000, float 0xBFAB83C5A0000000>) #16
+      %14 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %13, <16 x float> <float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000, float 0x3FC1107260000000>) #16
+      %15 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %11, <16 x float> %14, <16 x float> <float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000, float 0xBFD5555320000000>) #16
+      %16 = fmul <16 x float> %11, %15
+      %17 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %16, <16 x float> %4, <16 x float> %4) #16
+      %18 = bitcast <16 x float> %17 to <16 x i32>
+      %19 = icmp eq i16 %6, -1
+      br i1 %19, label %48, label %20
+
+    20:                                               ; preds = %10, %1
+      %21 = phi <16 x i32> [ %18, %10 ], [ <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>, %1 ]
+      %22 = fadd <16 x float> %4, %4
+      %23 = fmul <16 x float> %22, <float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000, float 0x3FF7154760000000>
+      %24 = tail call <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float> %23, i32 0, <16 x float> zeroinitializer, i16 -1, i32 4)
+      %25 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %24, <16 x float> <float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000, float 0xBFE6300000000000>, <16 x float> %22) #16
+      %26 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %24, <16 x float> <float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000, float 0x3F2BD01060000000>, <16 x float> %25) #16
+      %27 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> <float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000, float 0x3F56EF19E0000000>, <16 x float> <float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000, float 0x3F8131B160000000>) #16
+      %28 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %27, <16 x float> <float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000, float 0x3FA5552AE0000000>) #16
+      %29 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %28, <16 x float> <float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000, float 0x3FC55534A0000000>) #16
+      %30 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %26, <16 x float> %29, <16 x float> <float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01, float 5.000000e-01>) #16
+      %31 = fmul <16 x float> %26, %26
+      %32 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %30, <16 x float> %31, <16 x float> %26) #16
+      %33 = fadd <16 x float> %32, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+      %34 = fcmp ole <16 x float> %22, <float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000, float 0xC0561814A0000000>
+      %35 = tail call <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float> %24, <16 x i32> zeroinitializer, i16 -1, i32 4) #16
+      %36 = shl <16 x i32> %35, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
+      %37 = add <16 x i32> %36, <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>
+      %38 = bitcast <16 x i32> %37 to <16 x float>
+      %39 = fmul <16 x float> %33, %38
+      %40 = fcmp oge <16 x float> %22, <float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000, float 0x40561814A0000000>
+      %41 = fadd <16 x float> %39, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+      %42 = fdiv <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %41
+      %43 = select <16 x i1> %34, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> %42
+      %44 = select <16 x i1> %40, <16 x float> zeroinitializer, <16 x float> %43
+      %45 = tail call <16 x float> @llvm.fma.v16f32(<16 x float> %44, <16 x float> <float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00, float -2.000000e+00>, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>) #16
+      %46 = bitcast <16 x float> %45 to <16 x i32>
+      %47 = select <16 x i1> %5, <16 x i32> %21, <16 x i32> %46
+      br label %48
+
+    48:                                               ; preds = %10, %20
+      %49 = phi <16 x i32> [ %47, %20 ], [ %18, %10 ]
+      %50 = xor <16 x i32> %49, %8
+      %51 = bitcast <16 x i32> %50 to <16 x float>
+      ret <16 x float> %51
+    """), Vec{16,Float32}, Tuple{Vec{16,Float32}}, v)
+        end
+        @inline function tanh(v::Vec{8,Float64})
+            Base.llvmcall(("""
+        declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
+        declare <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double>, i32, <8 x double>, i8, i32)
+        declare <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double>, <8 x i32>, i8, i32) #16
+        """, """
+          %2 = bitcast <8 x double> %0 to <8 x i64>
+          %3 = and <8 x i64> %2, <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>
+          %4 = bitcast <8 x i64> %3 to <8 x double>
+          %5 = fcmp olt <8 x double> %4, <double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01, double 6.250000e-01>
+          %6 = bitcast <8 x i1> %5 to i8
+          %7 = and <8 x i64> %2, <i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808>
+          %8 = icmp eq i8 %6, 0
+          br i1 %8, label %20, label %9
+
+        9:                                                ; preds = %1
+          %10 = fmul <8 x double> %4, %4
+          %11 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %10, <8 x double> <double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B, double 0xBFEEDC5BAAFD6F4B>, <8 x double> <double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D, double 0xC058D26A0E26682D>) #16
+          %12 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %10, <8 x double> %11, <8 x double> <double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563, double 0xC0993AC030580563>) #16
+          %13 = fmul <8 x double> %12, %10
+          %14 = fadd <8 x double> %10, <double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86, double 0x405C33F28A581B86>
+          %15 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %10, <8 x double> %14, <8 x double> <double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA, double 0x40A176FA0E5535FA>) #16
+          %16 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %10, <8 x double> %15, <8 x double> <double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C, double 0x40B2EC102442040C>) #16
+          %17 = fdiv <8 x double> %13, %16
+          %18 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %17, <8 x double> %4, <8 x double> %4) #16
+          %19 = icmp eq i8 %6, -1
+          br i1 %19, label %54, label %20
+
+        20:                                               ; preds = %9, %1
+          %21 = phi <8 x double> [ %18, %9 ], [ <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %1 ]
+          %22 = fmul <8 x double> %4, <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+          %23 = fmul <8 x double> %4, <double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE, double 0x40071547652B82FE>
+          %24 = tail call <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double> %23, i32 0, <8 x double> zeroinitializer, i8 -1, i32 4)
+          %25 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %24, <8 x double> <double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000, double 0xBFE62E42FEE00000>, <8 x double> %22) #16
+          %26 = fmul <8 x double> %24, <double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76, double 0x3DEA39EF35793C76>
+          %27 = fsub <8 x double> %25, %26
+          %28 = fmul <8 x double> %27, %27
+          %29 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> <double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0, double 0x3E66376972BEA4D0>, <8 x double> <double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1, double 0xBEBBBD41C5D26BF1>) #16
+          %30 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %29, <8 x double> <double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C, double 0x3F11566AAF25DE2C>) #16
+          %31 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %30, <8 x double> <double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93, double 0xBF66C16C16BEBD93>) #16
+          %32 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %31, <8 x double> <double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E, double 0x3FC555555555553E>) #16
+          %33 = fneg <8 x double> %32
+          %34 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %28, <8 x double> %33, <8 x double> %27) #16
+          %35 = fmul <8 x double> %34, %27
+          %36 = fsub <8 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, %34
+          %37 = fdiv <8 x double> %35, %36
+          %38 = fsub <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %26
+          %39 = fadd <8 x double> %38, %25
+          %40 = fadd <8 x double> %39, %37
+          %41 = fcmp ole <8 x double> %22, <double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2>
+          %42 = tail call <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double> %24, <8 x i32> zeroinitializer, i8 -1, i32 4) #16
+          %43 = shl <8 x i64> %42, <i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52>
+          %44 = add <8 x i64> %43, <i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408>
+          %45 = bitcast <8 x i64> %44 to <8 x double>
+          %46 = fmul <8 x double> %40, %45
+          %47 = fcmp oge <8 x double> %22, <double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF, double 0x40862E42FEFA39EF>
+          %48 = fadd <8 x double> %46, <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+          %49 = fdiv <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %48
+          %50 = select <8 x i1> %41, <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <8 x double> %49
+          %51 = select <8 x i1> %47, <8 x double> zeroinitializer, <8 x double> %50
+          %52 = tail call <8 x double> @llvm.fma.v8f64(<8 x double> %51, <8 x double> <double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00, double -2.000000e+00>, <8 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>) #16
+          %53 = select <8 x i1> %5, <8 x double> %21, <8 x double> %52
+          br label %54
+
+        54:                                               ; preds = %9, %20
+          %55 = phi <8 x double> [ %53, %20 ], [ %18, %9 ]
+          %56 = bitcast <8 x double> %55 to <8 x i64>
+          %57 = xor <8 x i64> %7, %56
+          %58 = bitcast <8 x i64> %57 to <8 x double>
+          ret <8 x double> %58
+        """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
+        end
+
+        @inline tanh(v::SVec{16,Float32}) = SVec(tanh(extract_data(v)))
+        @inline tanh(v::SVec{8,Float64}) = SVec(tanh(extract_data(v)))
+    end # AVX512F
+end # LLVM ≥ v"9"
     

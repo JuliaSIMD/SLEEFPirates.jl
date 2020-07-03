@@ -1,5 +1,6 @@
 module SLEEFPirates
 
+using Base: llvmcall
 using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
 using SIMDPirates
