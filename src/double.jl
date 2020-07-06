@@ -163,7 +163,7 @@ end
     Double(vifelse(b, V(x.hi), V(y.hi)), vifelse(b, V(x.lo), V(y.lo)))
 end
 
-if false#FMA_FAST
+if FMA_FAST
 
     # two-prod-fma
     @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
