@@ -34,10 +34,10 @@ end
 
 # @inline trunclo(x::SIMDPirates.SVecProduct) = trunclo(SVec(SIMDPirates.extract_data(x)))
 @inline function trunclo(x::SVec{N,Float64}) where {N}
-    reinterpret(SVec{N,Float64}, reinterpret(SVec{N,UInt64}, x) & 0xffff_ffff_f800_0000) # clear lower 27 bits (leave upper 26 bits)
+    reinterpret(SVec{N,Float64}, reinterpret(SVec{N,UInt64}, x) & vbroadcast(SVec{N,UInt64}, 0xffff_ffff_f800_0000)) # clear lower 27 bits (leave upper 26 bits)
 end
 @inline function trunclo(x::SVec{N,Float32}) where {N}
-    reinterpret(SVec{N,Float32}, reinterpret(SVec{N,UInt32}, x) & 0xffff_f000) # clear lowest 12 bits (leave upper 12 bits)
+    reinterpret(SVec{N,Float32}, reinterpret(SVec{N,UInt32}, x) & vbroadcast(SVec{N,UInt32}, 0xffff_f000)) # clear lowest 12 bits (leave upper 12 bits)
 end
 
 @inline function splitprec(x::vIEEEFloat)
@@ -163,7 +163,7 @@ end
     Double(vifelse(b, V(x.hi), V(y.hi)), vifelse(b, V(x.lo), V(y.lo)))
 end
 
-if FMA_FAST
+if false#FMA_FAST
 
     # two-prod-fma
     @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
