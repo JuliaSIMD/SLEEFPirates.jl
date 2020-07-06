@@ -210,6 +210,10 @@ end
 @inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
 @inline log1m(v::SIMDPirates._Vec{W,T}) where {W,T} = log1p(vsub(v))
 @inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log1p(vsub(v))
+@inline function tanh_fast(x)
+    exp2x = exp(x + x)
+    (exp2x - one(x)) / (exp2x + one(x))
+end
 
 """
     register(;fast = false)
