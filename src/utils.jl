@@ -4,11 +4,7 @@
 # for T in (Float32, Float64)
 #     @eval is_fma_fast(::Type{$T}) = $(muladd(nextfloat(one(T)), nextfloat(one(T)), -nextfloat(one(T), 2)) != zero(T))
 # end
-@static if SIMDPirates.VectorizationBase.LLVM_SHOULD_WORK
-    const FMA_FAST = SIMDPirates.VectorizationBase.FMA | SIMDPirates.VectorizationBase.FMA4
-else
-    const FMA_FAST = SIMDPirates.VectorizationBase.FMAe
-end
+const FMA_FAST = SIMDPirates.VectorizationBase.FMA
 
 @inline isnegzero(x::T) where {T<:Union{Float32,Float64}} = x === T(-0.0)
 # Disabling the check for performance when vecterized.
