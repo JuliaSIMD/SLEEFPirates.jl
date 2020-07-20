@@ -120,9 +120,10 @@ if Int === Int64
     end
 end
 include("lgamma.jl")
-if SIMDPirates.VectorizationBase.REGISTER_SIZE == 64
-    include("sleef.jl")
-end
+include("sleef.jl")
+include("xsimd.jl")
+
+
 # fallback definitions
 
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
