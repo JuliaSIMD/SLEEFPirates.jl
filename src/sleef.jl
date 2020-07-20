@@ -339,7 +339,8 @@ end
 # end
 
 @static if Base.libllvm_version ≥ v"9"
-    @static if SIMDPirates.VectorizationBase.AVX & SIMDPirates.VectorizationBase.FMA
+    @static if SIMDPirates.VectorizationBase.FMA & (SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32) # In earlier Julia versions, AVX will not be defined
+        # SIMDPirates.VectorizationBase.AVX & 
         @inline function tanh(v::Vec{8,Float32})
             Base.llvmcall(("""
 declare i32 @llvm.x86.avx.vtestz.ps.256(<8 x float>, <8 x float>) #16

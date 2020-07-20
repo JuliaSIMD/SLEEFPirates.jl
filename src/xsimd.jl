@@ -90,7 +90,7 @@ if Sys.ARCH === :x86_64
     end
 end
 
-if SIMDPirates.VectorizationBase.AVX
+if Sys.ARCH === :x86_64 && SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32 # In earlier Julia versions, AVX will not be defined
     @inline function Base.expm1(v::SVec{4,Float64})
         SVec(Base.llvmcall(("""
                 declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>)
