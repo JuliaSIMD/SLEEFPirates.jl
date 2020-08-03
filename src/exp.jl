@@ -72,7 +72,7 @@ end
 
 const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256]
 
-for (func, base) in (:myexp2=>Val(2), :myexp=>Val(ℯ), :myexp10=>Val(10))
+for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     @eval begin
         
         @inline function ($func)(x::Union{T,SVec{<:Any,T}}) where {T<:Float64}
