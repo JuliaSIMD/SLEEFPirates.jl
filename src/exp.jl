@@ -89,9 +89,9 @@ for (func, base) in (:myexp2=>Val(2), :myexp=>Val(ℯ), :myexp10=>Val(10))
             twopk = rem(vadd(k,53), UInt64) << 52
             
             res = reinterpret(T, vadd(twopk, small_part))
-            res = ifelse(x >= MAX_EXP($base, T), Inf, res)
-            res = ifelse(x <= MIN_EXP($base, T), 0.0, res)
-            res = ifelse(isnan(x), x, res)
+            res = vifelse(x >= MAX_EXP($base, T), Inf, res)
+            res = vifelse(x <= MIN_EXP($base, T), 0.0, res)
+            res = vifelse(isnan(x), x, res)
             return res
         end
         
@@ -108,9 +108,9 @@ for (func, base) in (:myexp2=>Val(2), :myexp=>Val(ℯ), :myexp10=>Val(10))
             twopk = N<< Int32(23)
             
             res = reinterpret(T, vadd(twopk, small_part))
-            res = ifelse(x >= MAX_EXP($base, T), Inf32, res)
-            res = ifelse(x <= MIN_EXP($base, T), 0.0f0, res)
-            res = ifelse(isnan(x), x, res)
+            res = vifelse(x >= MAX_EXP($base, T), Inf32, res)
+            res = vifelse(x <= MIN_EXP($base, T), 0.0f0, res)
+            res = vifelse(isnan(x), x, res)
             return res
         end
     end
