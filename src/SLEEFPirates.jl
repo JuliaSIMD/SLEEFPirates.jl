@@ -123,6 +123,7 @@ include("lgamma.jl")
 include("sleef.jl")
 include("xsimd.jl")
 
+@inline Base.exp(x::SVec) = exp(x)
 
 # fallback definitions
 
