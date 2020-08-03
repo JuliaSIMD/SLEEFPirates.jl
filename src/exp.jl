@@ -1,121 +1,119 @@
-# exported exponential functions
+# magic rounding constant: 1.5*2^52 Adding, then subtracting it from a float rounds it to an Int.
+MAGIC_ROUND_CONST(::Type{Float64}) = 6.755399441055744e15
+MAGIC_ROUND_CONST(::Type{Float32}) = 1.2582912f7
 
-"""
-    ldexp(a, n)
+# min and max arguments by base and type
+MAX_EXP(::Val{2},  ::Type{Float64}) =  1024.0                   # log2 2^1023*(2-2^-52)
+MIN_EXP(::Val{2},  ::Type{Float64}) = -1075.0                   # log2 2^-1075
+MAX_EXP(::Val{2},  ::Type{Float32}) =  128f0                    # log2 2^127*(2-2^-52)
+MIN_EXP(::Val{2},  ::Type{Float32}) = -140f0                    # log2 2^-1075
+MAX_EXP(::Val{ℯ},  ::Type{Float64}) =  709.782712893383996732   # log 2^1023*(2-2^-52)
+MIN_EXP(::Val{ℯ},  ::Type{Float64}) = -745.1332191019412076235  # log 2^-1075
+MAX_EXP(::Val{ℯ},  ::Type{Float32}) =  88.72283905206835f0      # log 2^127 *(2-2^-23)
+MIN_EXP(::Val{ℯ},  ::Type{Float32}) = -103.97207708f0           # log 2^-150
+MAX_EXP(::Val{10}, ::Type{Float64}) =  308.25471555991675       # log10 2^1023*(2-2^-52)
+MIN_EXP(::Val{10}, ::Type{Float64}) = -323.60724533877976       # log10 2^-1075
+MAX_EXP(::Val{10}, ::Type{Float32}) =  38.531839419103626f0     # log10 2^127 *(2-2^-23)
+MIN_EXP(::Val{10}, ::Type{Float32}) = -45.15449934959718f0      # log10 2^-150
 
-Computes `a × 2^n`
-"""
-ldexp(x::FloatType, q::IntegerType) = ldexpk(x, q)
+# 256/log(base, 2) (For Float64 reductions)
+LogBo256INV(::Val{2}, ::Type{Float64})    = 256.
+LogBo256INV(::Val{ℯ}, ::Type{Float64})     = 369.3299304675746
+LogBo256INV(::Val{10}, ::Type{Float64})   = 850.4135922911647
+# -log(base, 2)/256 in upper and lower bits
+LogBo256U(::Val{2}, ::Type{Float64})      = -0.00390625
+LogBo256U(::Val{ℯ}, ::Type{Float64})       = -0.0027076061740622863
+LogBo256U(::Val{10}, ::Type{Float64})     = -0.0011758984205624266
+LogBo256L(base::Val{2}, ::Type{Float64})  = 0.
+LogBo256L(base::Val{ℯ}, ::Type{Float64})  = -9.058776616587108e-20
+LogBo256L(base::Val{10}, ::Type{Float64}) = 1.0952062999160822e-20
 
+# 1/log(base, 2) (For Float32 reductions)
+LogBINV(::Val{2}, ::Type{Float32})    = 1f0
+LogBINV(::Val{ℯ}, ::Type{Float32})    = 1.442695f0
+LogBINV(::Val{10}, ::Type{Float32})   = 3.321928f0
+# -log(base, 2) in upper and lower bits
+LogBU(::Val{2}, ::Type{Float32})      = -1f0
+LogBU(::Val{ℯ}, ::Type{Float32})      = -0.6931472f0
+LogBU(::Val{10}, ::Type{Float32})     = -0.30103f0
+LogBL(base::Val{2}, ::Type{Float32})  =  0f0
+LogBL(base::Val{ℯ}, ::Type{Float32})  = 1.9046542f-9
+LogBL(base::Val{10}, ::Type{Float32}) = 1.4320989f-8
 
-const max_exp2(::Type{Float64}) = 1024
-const max_exp2(::Type{Float32}) = 128f0
-
-const min_exp2(::Type{Float64}) = -1075
-const min_exp2(::Type{Float32}) = -150f0
-
-@inline function exp2_kernel(x::FloatType64)
-    c11 = 0.4434359082926529454e-9
-    c10 = 0.7073164598085707425e-8
-    c9  = 0.1017819260921760451e-6
-    c8  = 0.1321543872511327615e-5
-    c7  = 0.1525273353517584730e-4
-    c6  = 0.1540353045101147808e-3
-    c5  = 0.1333355814670499073e-2
-    c4  = 0.9618129107597600536e-2
-    c3  = 0.5550410866482046596e-1
-    c2  = 0.2402265069591012214
-    c1  = 0.6931471805599452862
-    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
+# Range reduced kernels          
+@inline function expm1b_kernel(::Val{2}, x::Union{Float64, SVec{W, Float64} where W})
+    return x * @horner(x, 0.6931471805599393, 0.2402265069590989,
+                            0.055504115022757844, 0.009618130135925114)
+end
+@inline function expm1b_kernel(::Val{ℯ}, x::Union{Float64, SVec{W, Float64} where W})
+    return x * @horner(x, 0.9999999999999998, 0.49999999999999983,
+                            0.1666666704849642, 0.04166666762124105)
+end
+@inline function expm1b_kernel(::Val{10}, x::Union{Float64, SVec{W, Float64} where W})
+    return x * @horner(x, 2.302585092994046, 2.6509490552382577,
+                            2.0346785922926713, 1.1712561359457612,
+                            0.5393833837413015)
+end
+@inline function expb_kernel(::Val{2}, x::Union{Float32, SVec{W, Float32} where W})
+    return @horner(x, 1.0f0, 0.6931472f0, 0.24022652f0, 
+                        0.05550327f0, 0.009617995f0, 
+                        0.0013400431f0, 0.00015478022f0)
+end
+@inline function expb_kernel(::Val{ℯ}, x::Union{Float32, SVec{W, Float32} where W})
+    return @horner(x, 1.0f0, 1.0f0, 0.5f0,
+                        0.16666415f0, 0.041666083f0,
+                        0.008375129f0, 0.0013956056f0)
+end
+@inline function expb_kernel(::Val{10}, x::Union{Float32, SVec{W, Float32} where W})
+    return @horner(x, 1.0f0, 2.3025851f0, 2.6509492f0,
+                        2.034648f0, 1.1712388f0, 
+                        0.54208815f0, 0.20799689f0)
 end
 
-@inline function exp2_kernel(x::FloatType32)
-    c6 = 0.1535920892f-3
-    c5 = 0.1339262701f-2
-    c4 = 0.9618384764f-2
-    c3 = 0.5550347269f-1
-    c2 = 0.2402264476f0
-    c1 = 0.6931471825f0
-    return @horner x c1 c2 c3 c4 c5 c6
+const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256]
+
+@noinline function myexp_fallback(::Val{2}, x::SVec{W,T}) where {W, T}
+    return SVec(ntuple(Val(W)) do i Core.VecElement(exp2(x[i])) end)
+end
+@noinline function myexp_fallback(::Val{ℯ}, x::SVec{W,T}) where {W, T}
+    return SVec(ntuple(Val(W)) do i Core.VecElement(exp(x[i])) end)
+end
+@noinline function myexp_fallback(::Val{10}, x::SVec{W,T}) where {W, T}
+    return SVec(ntuple(Val(W)) do i Core.VecElement(exp10(x[i])) end)
 end
 
-"""
-    exp2(x)
-
-Compute the base-`2` exponential of `x`, that is `2ˣ`.
-"""
-@inline function exp2(d::V) where {V <: FloatType}
-    T = eltype(d)
-    q = round(d)
-    qi = unsafe_trunc(fpinttype(T), q)
-
-    s = d - q
-
-    u = exp2_kernel(s)
-    u = V(dnormalize(dadd(T(1.0), dmul(u,s))))
-
-    u = ldexp2k(u, qi)
-
-   u = vifelse(d > max_exp2(T), T(Inf), u)
-   u = vifelse(d < min_exp2(T), T(0.0), u)
-
-    return u
-end
-
-
-const max_exp10(::Type{<:FloatType64}) = 3.08254715559916743851e2 # log 2^1023*(2-2^-52)
-const max_exp10(::Type{<:FloatType32}) = 38.531839419103626f0 # log 2^127 *(2-2^-23)
-
-const min_exp10(::Type{<:FloatType64}) = -3.23607245338779784854769e2 # log10 2^-1075
-const min_exp10(::Type{<:FloatType32}) = -45.15449934959718f0         # log10 2^-150
-
-@inline function exp10_kernel(x::FloatType64)
-    c11 = 0.2411463498334267652e-3
-    c10 = 0.1157488415217187375e-2
-    c9  = 0.5013975546789733659e-2
-    c8  = 0.1959762320720533080e-1
-    c7  = 0.6808936399446784138e-1
-    c6  = 0.2069958494722676234e0
-    c5  = 0.5393829292058536229e0
-    c4  = 0.1171255148908541655e1
-    c3  = 0.2034678592293432953e1
-    c2  = 0.2650949055239205876e1
-    c1  = 0.2302585092994045901e1
-    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
-end
-
-@inline function exp10_kernel(x::FloatType32)
-    c6 = 0.2064004987f0
-    c5 = 0.5417877436f0
-    c4 = 0.1171286821f1
-    c3 = 0.2034656048f1
-    c2 = 0.2650948763f1
-    c1 = 0.2302585125f1
-    return @horner x c1 c2 c3 c4 c5 c6
-end
-
-"""
-    exp10(x)
-
-Compute the base-`10` exponential of `x`, that is `10ˣ`.
-"""
-@inline function exp10(d::V) where {V <: FloatType}
-    T = eltype(d)
-    q = round(T(MLOG10_2) * d)
-    qi = unsafe_trunc(fpinttype(T), q)
-
-    s = muladd(q, -L10U(T), d)
-    s = muladd(q, -L10L(T), s)
-
-    u = exp10_kernel(s)
-    u = V(dnormalize(dadd(T(1.0), dmul(u,s))))
-
-    u = ldexp2k(u, qi)
-
-    u = vifelse(d > max_exp10(T), T(Inf), u)
-    u = vifelse(d < min_exp10(T), T(0.0), u)
-
-    return u
+for (func, base) in (:myexp2=>Val(2), :myexp=>Val(ℯ), :myexp10=>Val(10))
+    @eval begin
+        @inline function ($func)(x::SVec{W,T}) where {W, T<:Float64}
+            any(!(abs(x) < MAX_EXP($base, T))) && return myexp_fallback($base, x)
+            N_float = vmuladd(x, LogBo256INV($base, T), MAGIC_ROUND_CONST(T))
+            N = reinterpret(SVec{W,Int64}, N_float) % Int32
+            N_float = vsub(N_float, MAGIC_ROUND_CONST(T))
+            
+            r = vmuladd(N_float, LogBo256U($base, T), x)
+            r = vmuladd(N_float, LogBo256L($base, T), r)
+            js = vload(stridedpointer(J_TABLE), (N&255,))
+            k = N >> 8
+            
+            small_part = reinterpret(SVec{W, Int64}, vmuladd(js, expm1b_kernel($base, r), js))
+            twopk = rem(vadd(k,53), UInt64) << 52
+            return reinterpret(SVec{W, T}, vadd(twopk, small_part))
+        end
+        
+        @inline function ($func)(x::SVec{W,T}) where {W, T<:Float32}
+            any(!(abs(x) < MAX_EXP($base, T))) && return myexp_fallback(x)
+            N_float = vmuladd(x, LogBINV($base, T), MAGIC_ROUND_CONST(T))
+            N = reinterpret(SVec{W,Int32}, N_float)
+            N_float = vsub(N_float, MAGIC_ROUND_CONST(T))
+            
+            r = vmuladd(N_float, LogBU($base, T), x)
+            r = vmuladd(N_float, LogBL($base, T), r)
+            
+            small_part = reinterpret(SVec{W, Int32}, expb_kernel($base, r))
+            twopk = N<< Int32(23)
+            return reinterpret(SVec{W, T}, vadd(twopk, small_part))
+        end
+    end
 end
 
 
@@ -137,79 +135,5 @@ Compute `eˣ- 1` accurately for small values of `x`.
     u = vifelse(x > max_expm1(T), T(Inf), u)
     u = vifelse(x < min_expm1(T), T(-1.0), u)
     # u = vifelse(isnegzero(x), T(-0.0), u)
-    return u
-end
-
-
-const max_exp(::Type{<:FloatType64}) = 709.78271114955742909217217426  # log 2^1023*(2-2^-52)
-const max_exp(::Type{<:FloatType32}) = 88.72283905206835f0             # log 2^127 *(2-2^-23)
-
-const min_exp(::Type{<:FloatType64}) = -7.451332191019412076235e2 # log 2^-1075
-const min_exp(::Type{<:FloatType32}) = -103.97208f0               # ≈ log 2^-150
-
-@inline function exp_kernel(x::FloatType64)
-    c11 = 2.08860621107283687536341e-09
-    c10 = 2.51112930892876518610661e-08
-    c9  = 2.75573911234900471893338e-07
-    c8  = 2.75572362911928827629423e-06
-    c7  = 2.4801587159235472998791e-05
-    c6  = 0.000198412698960509205564975
-    c5  = 0.00138888888889774492207962
-    c4  = 0.00833333333331652721664984
-    c3  = 0.0416666666666665047591422
-    c2  = 0.166666666666666851703837
-    c1  = 0.50
-    return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11))
-end
-
-@inline function exp_kernel(x::FloatType32)
-    c6 = 0.000198527617612853646278381f0
-    c5 = 0.00139304355252534151077271f0
-    c4 = 0.00833336077630519866943359f0
-    c3 = 0.0416664853692054748535156f0
-    c2 = 0.166666671633720397949219f0
-    c1 = 0.5f0
-    return @horner x c1 c2 c3 c4 c5 c6
-end
-
-"""
-    exp(x)
-
-Compute the base-`e` exponential of `x`, that is `eˣ`.
-"""
-@inline function exp(d::FloatType)
-    T = eltype(d)
-    q = round(T(MLN2E) * d)
-    I = fpinttype(T)
-    qi = unsafe_trunc(I, q)
-
-    s = muladd(q, -L2U(T), d)
-    s = muladd(q, -L2L(T), s)
-
-    u = exp_kernel(s)
-    u = s * s * u + s + one(I)
-    u = ldexp2k(u, qi)
-
-    u = vifelse(d > max_exp(T), T(Inf), u)
-    u = vifelse(d < min_exp(T), T(0), u)
-
-    return u
-end
-function exp_noinline(d::FloatType)
-    T = eltype(d)
-    q = round(T(MLN2E) * d)
-    I = fpinttype(T)
-    qi = unsafe_trunc(I, q)
-
-    s = muladd(q, -L2U(T), d)
-    s = muladd(q, -L2L(T), s)
-
-    u = exp_kernel(s)
-    u = s * s * u + s + one(I)
-    u = ldexp2k(u, qi)
-
-    u = vifelse(d > max_exp(T), T(Inf), u)
-    u = vifelse(d < min_exp(T), T(0), u)
-
     return u
 end
