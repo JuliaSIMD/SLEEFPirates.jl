@@ -265,6 +265,7 @@ if SIMDPirates.VectorizationBase.AVX512F
           ret <8 x double> %52
         """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
     end
+    @inline Base.log1p(v::SVec{8,Float64}) = SVec(log1p(extract_data(v)))
 end
 # @inline function log1p(v::Vec{8,Float64})
 #     Base.llvmcall(("""

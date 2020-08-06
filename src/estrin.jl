@@ -47,7 +47,11 @@ end
 
 
 macro estrin(x, p...)#::Vararg{N}) where {N}
-    esc(Expr(:call, :estrin, x, Expr(:tuple, p...)))
+    if __module__ == SLEEFPirates
+        esc(Expr(:call, :estrin, x, Expr(:tuple, p...)))
+    else
+        esc(Expr(:call, Expr(:(.), :SLEEFPirates, QuoteNode(:estrin)), x, Expr(:tuple, p...)))
+    end
     # esc(:(_estrin($x, $p)))
 end
 
