@@ -21,9 +21,9 @@ where `significand ∈ [1, 2)`.
 """
 function ilogb(x::FloatType)
     e = ilogbk(abs(x))
-    e = vifelse(x == 0, FP_ILOGB0, e)
-    e = vifelse(isnan(x), FP_ILOGBNAN, e)
-    e = vifelse(isinf(x), INT_MAX, e)
+    e = ifelse(x == 0, FP_ILOGB0, e)
+    e = ifelse(isnan(x), FP_ILOGBNAN, e)
+    e = ifelse(isinf(x), INT_MAX, e)
     return e
 end
 
@@ -38,9 +38,9 @@ function log10(a::V) where {V <: FloatType}
     T = eltype(a)
     x = V(dmul(logk(a), MDLN10E(T)))
 
-    x = vifelse(isinf(a), T(Inf), x)
-    x = vifelse((a < 0) | isnan(a), T(NaN), x)
-    x = vifelse(a == 0, T(-Inf), x)
+    x = ifelse(isinf(a), T(Inf), x)
+    x = ifelse((a < 0) | isnan(a), T(NaN), x)
+    x = ifelse(a == 0, T(-Inf), x)
 
     return x
 end
@@ -56,9 +56,9 @@ function log2(a::V) where {V <: FloatType}
     T = eltype(a)
     u = V(dmul(logk(a), MDLN2E(T)))
 
-    u = vifelse(isinf(a), T(Inf), u)
-    u = vifelse((a < 0) | isnan(a), T(NaN), u)
-    u = vifelse(a == 0, T(-Inf), u)
+    u = ifelse(isinf(a), T(Inf), u)
+    u = ifelse((a < 0) | isnan(a), T(NaN), u)
+    u = ifelse(a == 0, T(-Inf), u)
 
     return u
 end
@@ -77,14 +77,20 @@ Accurately compute the natural logarithm of 1+x.
     T = eltype(a)
     x = V(logk2(dadd2(a, T(1.0))))
 
-    x = vifelse(a > over_log1p(T), T(Inf), x)
-    x = vifelse(a < -1, T(NaN), x)
-    x = vifelse(a == -1, T(-Inf), x)
-    x = vifelse(isnegzero(a), T(-0.0), x)
+    x = ifelse(a > over_log1p(T), T(Inf), x)
+    x = ifelse(a < -1, T(NaN), x)
+    x = ifelse(a == -1, T(-Inf), x)
+    x = ifelse(isnegzero(a), T(-0.0), x)
 
     return x
 end
 
+
+
+
+
+
+    
 
 
 @inline function log_kernel(x::FloatType64)
@@ -117,11 +123,11 @@ the natural expoenential function `exp(x)`
     T = eltype(d)
     I = fpinttype(T)
     o = d < floatmin(T)
-    d = vifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
+    d = ifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
 
     e = ilogb2k(d * T(1.0/0.75))
     m = ldexp3k(d, -e)
-    e = vifelse(o, e - I(64), e)
+    e = ifelse(o, e - I(64), e)
 
     x  = ddiv(dadd2(T(-1.0), m), dadd2(T(1.0), m))
     x2 = x.hi*x.hi
@@ -133,9 +139,9 @@ the natural expoenential function `exp(x)`
     s = dadd(s, x2*x.hi*t)
     r = V(s)
 
-    r = vifelse(isinf(d), T(Inf), r)
-    r = vifelse((d < 0) | isnan(d), T(NaN), r)
-    r = vifelse(d == 0, T(-Inf), r)
+    r = ifelse(isinf(d), T(Inf), r)
+    r = ifelse((d < 0) | isnan(d), T(NaN), r)
+    r = ifelse(d == 0, T(-Inf), r)
 
     return r
 end
@@ -181,9 +187,6 @@ end
     @horner x c1 c2 c3 c4 c5
 end
 
-# @inline fm(x::SIMDPirates.AbstractSIMDVector) = SVec(SIMDPirates.extract_data(x))
-# @inline fm(x::SIMDPirates.AbstractSIMDVector) = x
-
 """
     log_fast(x)
 
@@ -194,11 +197,11 @@ the natural expoenential function `exp(x)`
     T = eltype(d)
     I = fpinttype(T)
     o = d < floatmin(T)
-    d = vifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
+    d = ifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
 
     e = ilogb2k(d * T(1.0/0.75))
     m = ldexp3k(d, -e)
-    e = vifelse(o, e - I(64), e)
+    e = ifelse(o, e - I(64), e)
 
     x  = (m - one(I)) / (m + one(I))
     x2 = x * x
@@ -207,9 +210,9 @@ the natural expoenential function `exp(x)`
 
     x = x * t + T(MLN2) * e
 
-    x = vifelse(isinf(d), T(Inf), x)
-    x = vifelse((d < zero(I)) | isnan(d), T(NaN), x)
-    x = vifelse(d == zero(I), T(-Inf), x)
+    x = ifelse(isinf(d), T(Inf), x)
+    x = ifelse((d < zero(I)) | isnan(d), T(NaN), x)
+    x = ifelse(d == zero(I), T(-Inf), x)
 
     return x
 end

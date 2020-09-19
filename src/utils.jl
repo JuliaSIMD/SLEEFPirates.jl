@@ -4,7 +4,6 @@
 # for T in (Float32, Float64)
 #     @eval is_fma_fast(::Type{$T}) = $(muladd(nextfloat(one(T)), nextfloat(one(T)), -nextfloat(one(T), 2)) != zero(T))
 # end
-const FMA_FAST = SIMDPirates.VectorizationBase.FMA
 
 @inline isnegzero(x::T) where {T<:Union{Float32,Float64}} = x === T(-0.0)
 # Disabling the check for performance when vecterized.
@@ -58,7 +57,6 @@ end
 @inline float2integer(d::Float64) = (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
 @inline float2integer(d::Float32) = (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
 
-# @inline float2integer(d::SIMDPirates.SVecProduct) = float2integer(SVec(SIMDPirates.extract_data(d)))
 @inline function float2integer(d::SVec{W,Float32}) where {W}
     (reinterpret(SVec{W,Int32}, d) >> significand_bits(Float32)) % Int32
 end

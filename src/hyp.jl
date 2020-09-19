@@ -14,10 +14,10 @@ Compute hyperbolic sine of `x`.
     d = expk2(Double(u))
     d = dsub(d, drec(d))
     u = V(d) * T(0.5)
-    u = vifelse(abs(x) > over_sch(T), T(Inf), u)
-    u = vifelse(isnan(u), T(Inf), u)
+    u = ifelse(abs(x) > over_sch(T), T(Inf), u)
+    u = ifelse(isnan(u), T(Inf), u)
     u = flipsign(u, x)
-    u = vifelse(isnan(x), T(NaN), u)
+    u = ifelse(isnan(x), T(NaN), u)
     return u
 end
 
@@ -34,9 +34,9 @@ Compute hyperbolic cosine of `x`.
     d = expk2(Double(u))
     d = dadd(d, drec(d))
     u = V(d) * T(0.5)
-    u = vifelse(abs(x) > over_sch(T), T(Inf), u)
-    u = vifelse(isnan(u), T(Inf), u)
-    u = vifelse(isnan(x), T(NaN), u)
+    u = ifelse(abs(x) > over_sch(T), T(Inf), u)
+    u = ifelse(isnan(u), T(Inf), u)
+    u = ifelse(isnan(x), T(NaN), u)
     return u
 end
 
@@ -57,10 +57,10 @@ Compute hyperbolic tangent of `x`.
     e = drec(d)
     d = ddiv(dsub(d, e), dadd(d, e))
     u = V(d)
-    u = vifelse(abs(x) > over_th(T), T(1.0), u)
-    u = vifelse(isnan(u), T(1), u)
+    u = ifelse(abs(x) > over_th(T), T(1.0), u)
+    u = ifelse(isnan(u), T(1), u)
     u = flipsign(u, x)
-    # u = vifelse(isnan(x), T(NaN), u)
+    # u = ifelse(isnan(x), T(NaN), u)
     return u
 end
 
@@ -75,16 +75,16 @@ Compute the inverse hyperbolic sine of `x`.
     y = abs(x)
 
     yg1 = y > 1
-    d = vifelse(yg1, drec(x), Double(y, V(0.0)))
+    d = ifelse(yg1, drec(x), Double(y, V(0.0)))
     d = dsqrt(dadd2(dsqu(d), T(1.0)))
-    d = vifelse(yg1, dmul(d, y), d)
+    d = ifelse(yg1, dmul(d, y), d)
 
     d = logk2(dnormalize(dadd(d, x)))
     y = V(d)
 
-    y = vifelse(((abs(x) > SQRT_MAX(T)) | isnan(y)), flipsign(T(Inf), x), y)
-    y = vifelse(isnan(x), T(NaN), y)
-    y = vifelse(isnegzero(x), T(-0.0), y)
+    y = ifelse(((abs(x) > SQRT_MAX(T)) | isnan(y)), flipsign(T(Inf), x), y)
+    y = ifelse(isnan(x), T(NaN), y)
+    y = ifelse(isnegzero(x), T(-0.0), y)
 
     return y
 end
@@ -101,10 +101,10 @@ Compute the inverse hyperbolic cosine of `x`.
     d = logk2(dadd2(dmul(dsqrt(dadd2(x, T(1.0))), dsqrt(dsub2(x, T(1.0)))), x))
     y = V(d)
 
-    y = vifelse(((x > SQRT_MAX(T)) | isnan(y)), T(Inf), y)
-    y = vifelse(x == T(1.0), T(0.0), y)
-    y = vifelse(x < T(1.0), T(NaN), y)
-    y = vifelse(isnan(x), T(NaN), y)
+    y = ifelse(((x > SQRT_MAX(T)) | isnan(y)), T(Inf), y)
+    y = ifelse(x == T(1.0), T(0.0), y)
+    y = ifelse(x < T(1.0), T(NaN), y)
+    y = ifelse(isnan(x), T(NaN), y)
 
     return y
 end
@@ -120,11 +120,11 @@ Compute the inverse hyperbolic tangent of `x`.
     T = eltype(x)
     u = abs(x)
     d = logk2(ddiv(dadd2(T(1.0), u), dsub2(T(1.0), u)))
-    u = vifelse(u > T(1.0), T(NaN), vifelse(u == T(1.0), T(Inf), V(d) * T(0.5)))
+    u = ifelse(u > T(1.0), T(NaN), ifelse(u == T(1.0), T(Inf), V(d) * T(0.5)))
 
-    u = vifelse(isinf(x) | isnan(u), T(NaN), u)
+    u = ifelse(isinf(x) | isnan(u), T(NaN), u)
     u = flipsign(u, x)
-    u = vifelse(isnan(x), T(NaN), u)
+    u = ifelse(isnan(x), T(NaN), u)
 
     return u
 end

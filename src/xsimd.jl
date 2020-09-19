@@ -28,8 +28,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 if Sys.ARCH === :x86_64
-    @inline function Base.expm1(v::SVec{2,Float64})
-        SVec(Base.llvmcall(("""
+    @inline function Base.expm1(v::Vec{2,Float64})
+        Vec(Base.llvmcall(("""
             declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)
             declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32)
             declare <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double>) #16
@@ -86,13 +86,13 @@ if Sys.ARCH === :x86_64
           %51 = select <2 x i1> %3, <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>, <2 x double> %50
           %52 = select <2 x i1> %2, <2 x double> <double -1.000000e+00, double -1.000000e+00>, <2 x double> %51
           ret <2 x double> %52
-        """), Vec{2,Float64}, Tuple{Vec{2,Float64}}, extract_data(v)))
+        """), _Vec{2,Float64}, Tuple{_Vec{2,Float64}}, data(v)))
     end
 end
 
-if Sys.ARCH === :x86_64 && SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32 # In earlier Julia versions, AVX will not be defined
-    @inline function Base.expm1(v::SVec{4,Float64})
-        SVec(Base.llvmcall(("""
+if Sys.ARCH === :x86_64 && VectorizationBase.REGISTER_SIZE ≥ 32 # In earlier Julia versions, AVX will not be defined
+    @inline function Base.expm1(v::Vec{4,Float64})
+        Vec(Base.llvmcall(("""
                 declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>)
                 declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32)
                 declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) #16
@@ -145,10 +145,10 @@ if Sys.ARCH === :x86_64 && SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32 # 
               %47 = select <4 x i1> %3, <4 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000, double 0x7FF0000000000000>, <4 x double> %46
               %48 = select <4 x i1> %2, <4 x double> <double -1.000000e+00, double -1.000000e+00, double -1.000000e+00, double -1.000000e+00>, <4 x double> %47
               ret <4 x double> %48
-          """), Vec{4,Float64}, Tuple{Vec{4,Float64}}, extract_data(v)))
+          """), _Vec{4,Float64}, Tuple{_Vec{4,Float64}}, data(v)))
     end
-    @inline function Base.expm1(v::SVec{8,Float32})
-        SVec(Base.llvmcall(("""
+    @inline function Base.expm1(v::Vec{8,Float32})
+        Vec(Base.llvmcall(("""
         declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32)
         declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #16
         declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>) #16
@@ -186,14 +186,14 @@ if Sys.ARCH === :x86_64 && SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32 # 
       %32 = select <8 x i1> %3, <8 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>, <8 x float> %31
       %33 = select <8 x i1> %2, <8 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>, <8 x float> %32
       ret <8 x float> %33
-      """), Vec{8,Float32}, Tuple{Vec{8,Float32}}, extract_data(v)))
+      """), _Vec{8,Float32}, Tuple{_Vec{8,Float32}}, data(v)))
         
     end
 end
-if SIMDPirates.VectorizationBase.AVX512F
+if VectorizationBase.AVX512F
 
-    @inline function Base.expm1(v::SVec{8,Float64})
-        SVec(Base.llvmcall(("""
+    @inline function Base.expm1(v::Vec{8,Float64})
+        Vec(Base.llvmcall(("""
         declare <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double>, i32, <8 x double>, i8, i32)
         declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>) #16
         declare <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double>, <8 x i32>, i8, i32) #16
@@ -247,8 +247,8 @@ if SIMDPirates.VectorizationBase.AVX512F
         """), 
     Vec{8,Float64}, Tuple{Vec{8,Float64}}, extract_data(v)))
     end
-    @inline function Base.expm1(v::SVec{16,Float32})
-        SVec(Base.llvmcall(("""
+    @inline function Base.expm1(v::Vec{16,Float32})
+        Vec(Base.llvmcall(("""
             declare <16 x float> @llvm.x86.avx512.mask.rndscale.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
             declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>) #16
             declare <16 x i32> @llvm.x86.avx512.mask.cvttps2dq.512(<16 x float>, <16 x i32>, i16, i32) #16

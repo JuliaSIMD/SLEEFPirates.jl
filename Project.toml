@@ -1,17 +1,17 @@
 name = "SLEEFPirates"
 uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
 authors = ["chriselrod <elrodc@gmail.com>"]
-version = "0.5.6"
+version = "0.6.0"
 
 [deps]
+IfElse = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-SIMDPirates = "21efa798-c60a-11e8-04d3-e1a92915a26a"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
 [compat]
-SIMDPirates = "0.8.1"
-VectorizationBase = "0.12.17"
-julia = "1"
+IfElse = "0"
+VectorizationBase = "0.13"
+julia = "1.4"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

@@ -6,9 +6,9 @@
     Nfrac1 = N >> 1
     nextp = :p_1_
     nextx = :x_1
-    Nfrac1 > 1 && push!(ex.args, :( $nextx = SIMDPirates.vmul(x,x) ))
+    Nfrac1 > 1 && push!(ex.args, :( $nextx = x * x ))
     for n ∈ 1:Nfrac1
-        push!(ex.args, :( $(Symbol(nextp,n)) = SIMDPirates.vmuladd(p[$(2n)],x,p[$(2n-1)]) ) )
+        push!(ex.args, :( $(Symbol(nextp,n)) = muladd(p[$(2n)],x,p[$(2n-1)]) ) )
     end
     oddNfrac = isodd(N)
     if oddNfrac
@@ -26,13 +26,13 @@
         depth += 1
         nextp = Symbol(:p_, depth, :_)
         nextx = Symbol(:x_, depth)
-        (Nfrac1 > 1 || oddNfrac) && push!(ex.args, :( $nextx = SIMDPirates.vmul($lastx, $lastx) ))
+        (Nfrac1 > 1 || oddNfrac) && push!(ex.args, :( $nextx = $lastx * $lastx ))
         for n ∈ 1:Nfrac1
             np = Symbol(nextp,n)
             # @show lastp, n
             lpu = Symbol(lastp,2n)
             lpl = Symbol(lastp,2n-1)
-            push!(ex.args, :( $np = SIMDPirates.vmuladd($lpu,$lastx,$lpl) ) )
+            push!(ex.args, :( $np = muladd($lpu,$lastx,$lpl) ) )
         end
         if oddNfrac
             Nfrac1 += 1
@@ -46,16 +46,16 @@
 end
 
 
-macro estrin(x, p...)#::Vararg{N}) where {N}
-    esc(Expr(:call, :estrin, x, Expr(:tuple, p...)))
-    # esc(:(_estrin($x, $p)))
+macro estrin(x, p...)
+    t = Expr(:tuple); foreach(pᵢ -> push!(t.args, pᵢ), p)
+    esc(Expr(:call, :estrin, x, t))
 end
 
 macro horner(x, p...)
     N = length(p)
-    ex = Expr(:call, :vmuladd, p[N], x, p[N-1])
+    ex = Expr(:call, :muladd, p[N], x, p[N-1])
     for n ∈ 2:N-1
-        ex = Expr(:call, :vmuladd, ex, x, p[N-n])
+        ex = Expr(:call, :muladd, ex, x, p[N-n])
     end
     esc(ex)
 end

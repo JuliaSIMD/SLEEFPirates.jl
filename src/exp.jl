@@ -42,75 +42,79 @@ LogBL(base::Val{10}, ::Type{Float32}) =  1.4320989f-8
 
 # Range reduced kernels          
 @inline function expm1b_kernel(::Val{2}, x::FloatType64)
-    return x * SLEEFPirates.@horner(x, 0.6931471805599393, 0.2402265069590989,
+    return x * @horner(x, 0.6931471805599393, 0.2402265069590989,
                             0.055504115022757844, 0.009618130135925114)
 end
 @inline function expm1b_kernel(::Val{ℯ}, x::FloatType64)
-    return x * SLEEFPirates.@horner(x, 0.9999999999999998, 0.49999999999999983,
+    return x * @horner(x, 0.9999999999999998, 0.49999999999999983,
                             0.1666666704849642, 0.04166666762124105)
 end
 @inline function expm1b_kernel(::Val{10}, x::FloatType64)
-    return x * SLEEFPirates.@horner(x, 2.302585092994046, 2.6509490552382577,
+    return x * @horner(x, 2.302585092994046, 2.6509490552382577,
                             2.0346785922926713, 1.1712561359457612,
                             0.5393833837413015)
 end
 @inline function expb_kernel(::Val{2}, x::FloatType32)
-    return SLEEFPirates.@horner(x, 1.0f0, 0.6931472f0, 0.24022652f0, 
+    return @horner(x, 1.0f0, 0.6931472f0, 0.24022652f0, 
                         0.05550327f0, 0.009617995f0, 
                         0.0013400431f0, 0.00015478022f0)
 end
 @inline function expb_kernel(::Val{ℯ}, x::FloatType32)
-    return SLEEFPirates.@horner(x, 1.0f0, 1.0f0, 0.5f0,
+    return @horner(x, 1.0f0, 1.0f0, 0.5f0,
                         0.16666415f0, 0.041666083f0,
                         0.008375129f0, 0.0013956056f0)
 end
 @inline function expb_kernel(::Val{10}, x::FloatType32)
-    return SLEEFPirates.@horner(x, 1.0f0, 2.3025851f0, 2.6509492f0,
+    return @horner(x, 1.0f0, 2.3025851f0, 2.6509492f0,
                         2.034648f0, 1.1712388f0, 
                         0.54208815f0, 0.20799689f0)
 end
 
-const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256]
+const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
+    Ndef1 = :(reinterpret(UInt64, N_float))
+    Ndef1 = VectorizationBase.AVX512DQ ? Ndef1 : :($Ndef1 % UInt32)
+    twopkpreshift = :(vadd(k, 0x0000000000000035))
+    twopkpreshift = VectorizationBase.AVX512DQ ? twopkpreshift : :($twopkpreshift % UInt64)
+    FF = VectorizationBase.AVX512DQ ? 0x00000000000000ff : 0x000000ff
     @eval begin
         
-        @inline function ($func)(x::Union{T,SVec{<:Any,T}}) where {T<:Float64}
-            N_float = vmuladd(x, LogBo256INV($base, T), MAGIC_ROUND_CONST(T))
-            N = reinterpret(Int64, N_float) % Int32
-            N_float = vsub(N_float, MAGIC_ROUND_CONST(T))
+        @inline function ($func)(x::FloatType64)
+            N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
+            N = $Ndef1
+            N_float = N_float - MAGIC_ROUND_CONST(Float64)
             
-            r = vmuladd(N_float, LogBo256U($base, T), x)
-            r = vmuladd(N_float, LogBo256L($base, T), r)
-            js = vload(stridedpointer(J_TABLE), (N&255,))
-            k = N >> 8
+            r = muladd(N_float, LogBo256U($base, Float64), x)
+            r = muladd(N_float, LogBo256L($base, Float64), r)
+            js = vload(stridedpointer(J_TABLE), (N & $FF,))
+            k = N >>> 8
             
-            small_part = reinterpret(UInt64, vmuladd(js, expm1b_kernel($base, r), js))
-            twopk = rem(vadd(k,53), UInt64) << 52
+            small_part = reinterpret(UInt64, muladd(js, expm1b_kernel($base, r), js))
+            twopk = $twopkpreshift << 0x0000000000000034
             
-            res = reinterpret(T, vadd(twopk, small_part))
-            res = vifelse(x >= MAX_EXP($base, T), Inf, res)
-            res = vifelse(x <= MIN_EXP($base, T), 0.0, res)
-            res = vifelse(isnan(x), x, res)
+            res = reinterpret(Float64, twopk + small_part)
+            res = ifelse(x >= MAX_EXP($base, Float64), Inf, res)
+            res = ifelse(x <= MIN_EXP($base, Float64), 0.0, res)
+            res = ifelse(isnan(x), x, res)
             return res
         end
         
-        @inline function ($func)(x::Union{T,SVec{<:Any,T}}) where {T<:Float32}
-            any(!(abs(x) < MAX_EXP($base, T))) && return myexp_fallback(x)
-            N_float = vmuladd(x, LogBINV($base, T), MAGIC_ROUND_CONST(T))
-            N = reinterpret(Int32, N_float)
-            N_float = vsub(N_float, MAGIC_ROUND_CONST(T))
+        @inline function ($func)(x::FloatType32)
+            N_float = muladd(x, LogBINV($base, Float32), MAGIC_ROUND_CONST(Float32))
+            N = reinterpret(UInt32, N_float)
+            N_float = N_float - MAGIC_ROUND_CONST(Float32)
             
-            r = vmuladd(N_float, LogBU($base, T), x)
-            r = vmuladd(N_float, LogBL($base, T), r)
+            r = muladd(N_float, LogBU($base, Float32), x)
+            r = muladd(N_float, LogBL($base, Float32), r)
             
             small_part = reinterpret(UInt32, expb_kernel($base, r))
-            twopk = N<< Int32(23)
+            twopk = N << 0x00000017
             
-            res = reinterpret(T, vadd(twopk, small_part))
-            res = vifelse(x >= MAX_EXP($base, T), Inf32, res)
-            res = vifelse(x <= MIN_EXP($base, T), 0.0f0, res)
-            res = vifelse(isnan(x), x, res)
+            res = reinterpret(Float32, twopk + small_part)
+            res = ifelse(x >= MAX_EXP($base, Float32), Inf32, res)
+            res = ifelse(x <= MIN_EXP($base, Float32), 0.0f0, res)
+            res = ifelse(isnan(x), x, res)
             return res
         end
     end
@@ -122,17 +126,17 @@ const max_expm1(::Type{<:FloatType32}) = 88.72283905206835f0 # log 2^127 *(2-2^-
 const min_expm1(::Type{<:FloatType64}) = -37.42994775023704434602223
 const min_expm1(::Type{<:FloatType32}) = -17.3286790847778338076068394f0
 
-"""
-    expm1(x)
+# """
+#     expm1(x)
 
-Compute `eˣ- 1` accurately for small values of `x`.
-"""
-@inline function expm1(x::FloatType)
-    T = eltype(x)
-    v = dadd2(expk2(Double(x)), -T(1.0))
-    u = v.hi + v.lo
-    u = vifelse(x > max_expm1(T), T(Inf), u)
-    u = vifelse(x < min_expm1(T), T(-1.0), u)
-    # u = vifelse(isnegzero(x), T(-0.0), u)
-    return u
-end
+# Compute `eˣ- 1` accurately for small values of `x`.
+# """
+# @inline function expm1(x::FloatType)
+#     T = eltype(x)
+#     v = dadd2(expk2(Double(x)), -T(1.0))
+#     u = v.hi + v.lo
+#     u = vifelse(x > max_expm1(T), T(Inf), u)
+#     u = vifelse(x < min_expm1(T), T(-1.0), u)
+#     # u = vifelse(isnegzero(x), T(-0.0), u)
+#     return u
+# end

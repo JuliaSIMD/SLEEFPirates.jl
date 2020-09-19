@@ -1,6 +1,6 @@
-if SIMDPirates.VectorizationBase.AVX512F
+if VectorizationBase.AVX512F
     @inline function log(v::Vec{8,Float64})
-        Base.llvmcall(("""
+        Vec(Base.llvmcall(("""
     declare <8 x double> @llvm.fmuladd.v8f64(<8 x double>, <8 x double>, <8 x double>)
     declare <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double>, <8 x double>, <8 x i64>, i32, i8, i32)
     declare <8 x double> @llvm.x86.avx512.mask.getexp.pd.512(<8 x double>, <8 x double>, i8, i32)
@@ -29,7 +29,7 @@ if SIMDPirates.VectorizationBase.AVX512F
       %22 = tail call <8 x double> @llvm.fmuladd.v8f64(<8 x double> %12, <8 x double> %18, <8 x double> %21) #13
       %23 = tail call <8 x double> @llvm.x86.avx512.mask.fixupimm.pd.512(<8 x double> %22, <8 x double> %0, <8 x i64> <i64 22517998142095360, i64 22517998142095360, i64 22517998142095360, i64 22517998142095360, i64 22517998142095360, i64 22517998142095360, i64 22517998142095360, i64 22517998142095360>, i32 0, i8 -1, i32 4)
       ret <8 x double> %23
-    """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
+    """), _Vec{8,Float64}, Tuple{_Vec{8,Float64}}, data(v)))
     end
 
     @static if Base.libllvm_version > v"8"
@@ -109,10 +109,10 @@ if SIMDPirates.VectorizationBase.AVX512F
         end
     end
 
-    @inline log(v::SVec{8,Float64}) = SVec(log(extract_data(v)))
-    @inline Base.log(v::SVec{8,Float64}) = SVec(log(extract_data(v)))
-    @inline log2(v::SVec{8,Float64}) = SVec(log2(extract_data(v)))
-    @inline Base.log2(v::SVec{8,Float64}) = SVec(log2(extract_data(v)))
+    @inline log(v::Vec{8,Float64}) = Vec(log(data(v)))
+    @inline Base.log(v::Vec{8,Float64}) = Vec(log(data(v)))
+    @inline log2(v::Vec{8,Float64}) = Vec(log2(data(v)))
+    @inline Base.log2(v::Vec{8,Float64}) = Vec(log2(data(v)))
 
     @inline function log1p(v::Vec{8,Float64})
         Base.llvmcall(("""
@@ -246,8 +246,8 @@ end
 # end
 
 @static if Base.libllvm_version ≥ v"9"
-    @static if SIMDPirates.VectorizationBase.FMA & (SIMDPirates.VectorizationBase.REGISTER_SIZE ≥ 32) # In earlier Julia versions, AVX will not be defined
-        # SIMDPirates.VectorizationBase.AVX & 
+    @static if VectorizationBase.FMA & (VectorizationBase.REGISTER_SIZE ≥ 32) # In earlier Julia versions, AVX will not be defined
+        # VectorizationBase.AVX & 
         @inline function tanh(v::Vec{8,Float32})
             Base.llvmcall(("""
 declare i32 @llvm.x86.avx.vtestz.ps.256(<8 x float>, <8 x float>) #16
@@ -460,11 +460,11 @@ declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double
   ret <4 x double> %56
 """), Vec{4,Float64}, Tuple{Vec{4,Float64}}, v)
         end
-        @inline tanh(v::SVec{8,Float32}) = SVec(tanh(extract_data(v)))
-        @inline tanh(v::SVec{4,Float64}) = SVec(tanh(extract_data(v)))
+        @inline tanh(v::Vec{8,Float32}) = Vec(tanh(data(v)))
+        @inline tanh(v::Vec{4,Float64}) = Vec(tanh(data(v)))
         
     end # AVX
-    @static if SIMDPirates.VectorizationBase.AVX512F
+    @static if VectorizationBase.AVX512F
         @inline function tanh(v::Vec{16,Float32})
             Base.llvmcall(("""
     declare <16 x float> @llvm.fmuladd.v16f32(<16 x float>, <16 x float>, <16 x float> )
@@ -603,8 +603,8 @@ declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double
         """), Vec{8,Float64}, Tuple{Vec{8,Float64}}, v)
         end
 
-        @inline tanh(v::SVec{16,Float32}) = SVec(tanh(extract_data(v)))
-        @inline tanh(v::SVec{8,Float64}) = SVec(tanh(extract_data(v)))
+        @inline tanh(v::Vec{16,Float32}) = Vec(tanh(data(v)))
+        @inline tanh(v::Vec{8,Float64}) = Vec(tanh(data(v)))
     end # AVX512F
 end # LLVM ≥ v"9"
 

@@ -3,25 +3,27 @@ module SLEEFPirates
 using Base: llvmcall
 using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
-using SIMDPirates
-using SIMDPirates: vifelse, vzero, AbstractStructVec, _Vec
+using Libdl, VectorizationBase
 
-export SVec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
+using VectorizationBase: vzero, AbstractSIMDVector, _Vec, FMA_FAST
+using IfElse: ifelse
 
-const FloatType64 = Union{Float64,SVec{<:Any,Float64}}
-const FloatType32 = Union{Float32,SVec{<:Any,Float32}}
+export Vec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
+
+const FloatType64 = Union{Float64,AbstractSIMDVector{<:Any,Float64}}
+const FloatType32 = Union{Float32,AbstractSIMDVector{<:Any,Float32}}
 const FloatType = Union{FloatType64,FloatType32}
-const IntegerType64 = Union{Int64,SVec{<:Any,Int64}}
-const IntegerType32 = Union{Int32,SVec{<:Any,Int32}}
+const IntegerType64 = Union{Int64,AbstractSIMDVector{<:Any,Int64}}
+const IntegerType32 = Union{Int32,AbstractSIMDVector{<:Any,Int32}}
 const IntegerType = Union{IntegerType64,IntegerType32}
 
 fpinttype(::Type{Float64}) = Int
 fpinttype(::Type{Float32}) = Int32
-function fpinttype(::Type{SVec{N,Float64}}) where {N}
-    SVec{N,Int}
+function fpinttype(::Type{Vec{N,Float64}}) where {N}
+    Vec{N,Int}
 end
-function fpinttype(::Type{SVec{N,Float32}}) where {N}
-    SVec{N,Int32}
+function fpinttype(::Type{Vec{N,Float32}}) where {N}
+    Vec{N,Int32}
 end
 
 
@@ -112,18 +114,18 @@ include("log.jl")    # logarithmic functions
 include("trig.jl")   # trigonometric and inverse trigonometric functions
 include("hyp.jl")    # hyperbolic and inverse hyperbolic functions
 include("misc.jl")   # miscallenous math functions including pow and cbrt
-if Int === Int64
-    if isfile(joinpath(@__DIR__, "svmlwrap.jl"))
-        include("svmlwrap.jl")
-    elseif Sys.islinux()
-        @warn "Building SLEEFPirates is likely to increase performance of some functions."
-    end
-end
+# if Int === Int64
+#     if isfile(joinpath(@__DIR__, "svmlwrap.jl"))
+#         include("svmlwrap.jl")
+#     elseif Sys.islinux()
+#         @warn "Building SLEEFPirates is likely to increase performance of some functions."
+#     end
+# end
 include("lgamma.jl")
 include("sleef.jl")
 include("xsimd.jl")
 
-@inline Base.exp(x::SVec) = exp(x)
+@inline Base.exp(x::Vec) = exp(x)
 
 # fallback definitions
 
@@ -133,11 +135,11 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
-        @inline $func(x::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x)))
-        @inline $func(x::SIMDPirates.AbstractSIMDVector) = $func(SVec(extract_data(x)))
-        @inline $func(v::SVec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(SVec{W,Float64}, v))
-        @inline $func(v::SVec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(SVec{W,Float32}, v))
-        @inline $func(i::_MM) = $func(SIMDPirates.svrange(i))
+        @inline $func(x::Vec) = data($func(Vec(x)))
+        @inline $func(x::AbstractSIMDVector) = $func(Vec(data(x)))
+        @inline $func(v::Vec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(Vec{W,Float64}, v))
+        @inline $func(v::Vec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(Vec{W,Float32}, v))
+        @inline $func(i::_MM) = $func(svrange(i))
     end
 end
 Tπ(::Type{T}) where {T} = promote_type(T, typeof(π))(π)
@@ -145,25 +147,25 @@ for func ∈ (:sin, :cos)
     funcpi = Symbol(func, :pi)
     funcfast = Symbol(func, :_fast)
     funcpifast = Symbol(func, :pi_fast)
-    @eval @inline $funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline Base.$funcpi(v::SIMDPirates.SVec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline $funcpifast(v::SIMDPirates.SVec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline $funcpi(v::SIMDPirates._Vec{W,T}) where {W,T} = extract_data($func(SVec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
-    @eval @inline $funcpi(i::_MM) = $funcpi(SIMDPirates.svrange(i))
-    @eval @inline $funcpifast(v::SIMDPirates._Vec{W,T}) where {W,T} = extract_data($funcfast(SVec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
+    @eval @inline $funcpi(v::Vec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+    @eval @inline Base.$funcpi(v::Vec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+    @eval @inline $funcpifast(v::Vec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+    @eval @inline $funcpi(v::_Vec{W,T}) where {W,T} = data($func(Vec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
+    @eval @inline $funcpi(i::_MM) = $funcpi(svrange(i))
+    @eval @inline $funcpifast(v::_Vec{W,T}) where {W,T} = data($funcfast(Vec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
 end
-@inline sincospi(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-@inline sincospi_fast(v::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+@inline sincospi(v::AbstractStructVec{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
+@inline sincospi_fast(v::AbstractStructVec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
 @inline sincospi(v::_Vec{W,T}) where {W,T} = sincos(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
 @inline sincospi_fast(v::_Vec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
-    @eval @inline Base.$func(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
+    @eval @inline Base.$func(x::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
     @eval @inline Base.$func(x::_MM) = $func(x)
 end
 for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
     func_fast = Symbol(func, :_fast)
-    @eval @inline Base.$func(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
+    @eval @inline Base.$func(x::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
     @eval @inline Base.$func(x::_MM) = $func_fast(x)
 end
 
@@ -172,45 +174,45 @@ for func in (:atan, :hypot, :pow)
     @eval begin
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
-        @inline $func(a::SIMDPirates.AbstractSIMDVector, b::SIMDPirates.AbstractSIMDVector) = $func(SVec(SIMDPirates.extract_data(a)),SVec(SIMDPirates.extract_data(b)))
-        @inline $func(x::SIMDPirates.Vec, y::SIMDPirates.Vec) = SIMDPirates.extract_data($func(SVec(x), SVec(y)))
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::SIMDPirates.Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.SVec(y))
-        @inline Base.$func2(x::SIMDPirates.Vec{W,T}, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.SVec(x), y)
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, SIMDPirates.vconvert(SIMDPirates.SVec{W,T},y))
-        @inline Base.$func2(x::T, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(SIMDPirates.vconvert(SIMDPirates.SVec{W,T},x), y)
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, SIMDPirates.vconvert(SIMDPirates.SVec{W,T1},T1(y)))
-        @inline Base.$func2(x::T2, y::SIMDPirates.AbstractStructVec{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(SIMDPirates.vconvert(SIMDPirates.SVec{W,T1},T1(x)), y)
-        @inline Base.$func2(x::SIMDPirates.AbstractStructVec{W,T}, y::SIMDPirates.AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
-        @inline $func(v1::SVec{W,I}, v2::SVec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(SVec{W,Float64}, v1), vconvert(SVec{W,Float64}, v2))
-        @inline $func(v1::SVec{W,I}, v2::SVec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(SVec{W,Float32}, v1), vconvert(SVec{W,Float32}, v2))
+        @inline $func(a::AbstractSIMDVector, b::AbstractSIMDVector) = $func(Vec(data(a)),Vec(data(b)))
+        @inline $func(x::Vec, y::Vec) = data($func(Vec(x), Vec(y)))
+        @inline Base.$func2(x::AbstractStructVec{W,T}, y::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, Vec(y))
+        @inline Base.$func2(x::Vec{W,T}, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
+        @inline Base.$func2(x::AbstractStructVec{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, vconvert(Vec{W,T},y))
+        @inline Base.$func2(x::T, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(vconvert(Vec{W,T},x), y)
+        @inline Base.$func2(x::AbstractStructVec{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, vconvert(Vec{W,T1},T1(y)))
+        @inline Base.$func2(x::T2, y::AbstractStructVec{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(vconvert(Vec{W,T1},T1(x)), y)
+        @inline Base.$func2(x::AbstractStructVec{W,T}, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
+        @inline $func(v1::Vec{W,I}, v2::Vec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(Vec{W,Float64}, v1), vconvert(Vec{W,Float64}, v2))
+        @inline $func(v1::Vec{W,I}, v2::Vec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(Vec{W,Float32}, v1), vconvert(Vec{W,Float32}, v2))
     end
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
 @inline function sincos(x::Vec)
-    s, c = sincos(SVec(x))
-    SIMDPirates.extract_data(s), SIMDPirates.extract_data(c)
+    s, c = sincos(Vec(x))
+    data(s), data(c)
 end
 @inline function sincos_fast(x::Vec)
-    s, c = sincos_fast(SVec(x))
-    SIMDPirates.extract_data(s), SIMDPirates.extract_data(c)
+    s, c = sincos_fast(Vec(x))
+    data(s), data(c)
 end
 @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(1,x)))
-@inline logit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(log(SIMDPirates.vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
-@inline logit(x::SIMDPirates._Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(x,vsub(vbroadcast(_Vec{W,T},one(T)),x)))
+@inline logit(x::AbstractStructVec{W,T}) where {W,T} = Vec(log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
+@inline logit(x::_Vec{W,T}) where {W,T} = log(vfdiv(x,vsub(vbroadcast(_Vec{W,T},one(T)),x)))
 @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(Base.FastMath.sub_fast(x))))
-@inline invlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
-@inline invlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(vsub(x))))
+@inline invlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
+@inline invlogit(x::_Vec{W,T}) where {W,T} = vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(vsub(x))))
 @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(1,x), x))
-@inline nlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(log(SIMDPirates.vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
-@inline nlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = log(SIMDPirates.vfdiv(vsub(vbroadcast(_Vec{W,T},one(T)),x),x))
+@inline nlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
+@inline nlogit(x::_Vec{W,T}) where {W,T} = log(vfdiv(vsub(vbroadcast(_Vec{W,T},one(T)),x),x))
 @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(x)))
-@inline ninvlogit(x::SIMDPirates.AbstractStructVec{W,T}) where {W,T} = SVec(SIMDPirates.vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
-@inline ninvlogit(x::SIMDPirates._Vec{W,T}) where {W,T} = SIMDPirates.vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(x)))
-@inline SIMDPirates.vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
-@inline SIMDPirates.vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
+@inline ninvlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
+@inline ninvlogit(x::_Vec{W,T}) where {W,T} = vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(x)))
+@inline vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
+@inline vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
 @inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
-@inline log1m(v::SIMDPirates._Vec{W,T}) where {W,T} = log1p(vsub(v))
+@inline log1m(v::_Vec{W,T}) where {W,T} = log1p(vsub(v))
 @inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log1p(vsub(v))
 @inline function tanh_fast(x)
     exp2x = exp(x + x)
@@ -229,6 +231,16 @@ function register(;fast = false)
     for func in (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt)
         fastfunc = fast ? Symbol(string(func) * "_fast") : func
         @eval Base.$func(x::Union{Float32, Float64}) = $fastfunc(x)
+    end
+end
+
+if Sys.islinux() && Sys.ARCH === :x86_64
+    mvl = find_library("libmvec.so", ["/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"])
+    if mvl !== "libmvec.so"
+        @eval const MVECLIB = $mvl
+        VectorizationBase.REGISTER_SIZE ≥ 16 && include("svmlwrap16.jl")
+        VectorizationBase.REGISTER_SIZE ≥ 32 && include("svmlwrap32.jl")
+        VectorizationBase.REGISTER_SIZE ≥ 64 && include("svmlwrap64.jl")
     end
 end
 
