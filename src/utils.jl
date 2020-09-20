@@ -8,13 +8,13 @@
 @inline isnegzero(x::T) where {T<:Union{Float32,Float64}} = x === T(-0.0)
 # Disabling the check for performance when vecterized.
 # A PR succesfully vectorizing the check is welcome.
-@inline isnegzero(::SVec{2}) = 0x00
-@inline isnegzero(::SVec{4}) = 0x00
-@inline isnegzero(::SVec{8}) = 0x00
-@inline isnegzero(::SVec{16}) = 0x0000
-@inline isnegzero(::SVec{32}) = 0x00000000
-@inline isnegzero(::SVec{64}) = 0x0000000000000000
-@inline isnegzero(x::SVec{N,T}) where {N,T} = x === -zero(T) #SVec{N,Bool}(false)
+@inline isnegzero(::Vec{2}) = 0x00
+@inline isnegzero(::Vec{4}) = 0x00
+@inline isnegzero(::Vec{8}) = 0x00
+@inline isnegzero(::Vec{16}) = 0x0000
+@inline isnegzero(::Vec{32}) = 0x00000000
+@inline isnegzero(::Vec{64}) = 0x0000000000000000
+@inline isnegzero(x::Vec{N,T}) where {N,T} = x === -zero(T) #Vec{N,Bool}(false)
 
 @inline ispinf(x::T) where {T<:FloatType} = x == T(Inf)
 @inline isninf(x::T) where {T<:FloatType} = x == T(-Inf)
@@ -27,38 +27,38 @@
 @inline integer2float(::Type{Float32}, m::Int32) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
 
 @static if Int === Int64
-    @inline function integer2float(::Type{<:Union{SVec{W,Float64},Float64}}, m::SVec{W,Int}) where {W}
-        reinterpret(SVec{W,Float64}, m << significand_bits(Float64))
+    @inline function integer2float(::Type{<:Union{Vec{W,Float64},Float64}}, m::Vec{W,Int}) where {W}
+        reinterpret(Vec{W,Float64}, m << significand_bits(Float64))
     end
-    @inline function float2integer(d::SVec{W,Float64}) where {W}
-        (reinterpret(SVec{W,Int64}, d) >> significand_bits(Float64))
+    @inline function float2integer(d::Vec{W,Float64}) where {W}
+        (reinterpret(Vec{W,Int64}, d) >> significand_bits(Float64))
     end
-    @inline function integer2float(::Type{SVec{W,Float32}}, m::Int) where {W}
+    @inline function integer2float(::Type{Vec{W,Float32}}, m::Int) where {W}
         reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
     end
     @inline function integer2float(::Type{Float32}, m::Int)
         reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
     end
 else
-    @inline function integer2float(::Type{Float64}, m::SVec{W,Int}) where {W}
-        reinterpret(SVec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
+    @inline function integer2float(::Type{Float64}, m::Vec{W,Int}) where {W}
+        reinterpret(Vec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
     end
-    @inline function integer2float(::Type{SVec{W,Float64}}, m::SVec{W,Int}) where {W}
-        reinterpret(SVec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
+    @inline function integer2float(::Type{Vec{W,Float64}}, m::Vec{W,Int}) where {W}
+        reinterpret(Vec{W,Float64}, (m % Int64) << Int64(significand_bits(Float64)))
     end
-    @inline function float2integer(d::SVec{W,Float64}) where {W}
-        (reinterpret(SVec{W,Int64}, d) >> significand_bits(Float64)) % Int
+    @inline function float2integer(d::Vec{W,Float64}) where {W}
+        (reinterpret(Vec{W,Int64}, d) >> significand_bits(Float64)) % Int
     end
 end
-@inline function integer2float(::Type{<:Union{SVec{W,Float32},Float32}}, m::SVec{W,<:Integer}) where {W}
-    reinterpret(SVec{W,Float32}, (m % Int32) << (significand_bits(Float32)) % Int32)
+@inline function integer2float(::Type{<:Union{Vec{W,Float32},Float32}}, m::Vec{W,<:Integer}) where {W}
+    reinterpret(Vec{W,Float32}, (m % Int32) << (significand_bits(Float32)) % Int32)
 end
 
 @inline float2integer(d::Float64) = (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
 @inline float2integer(d::Float32) = (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
 
-@inline function float2integer(d::SVec{W,Float32}) where {W}
-    (reinterpret(SVec{W,Int32}, d) >> significand_bits(Float32)) % Int32
+@inline function float2integer(d::Vec{W,Float32}) where {W}
+    (reinterpret(Vec{W,Int32}, d) >> significand_bits(Float32)) % Int32
 end
 
 @inline function pow2i(::Type{T}, q::I) where {T<:Union{Float32,Float64},I<:IntegerType}
@@ -67,4 +67,4 @@ end
 
 # sqrt without the domain checks which we don't need since we handle the checks ourselves
 @inline _sqrt(x::T) where {T<:Union{Float32,Float64}} = Base.sqrt_llvm(x)
-@inline _sqrt(x::SVec) = sqrt(x)
+@inline _sqrt(x::Vec) = sqrt(x)

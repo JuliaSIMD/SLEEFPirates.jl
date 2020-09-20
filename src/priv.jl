@@ -59,9 +59,9 @@ end
     UT = Base.uinttype(T)
     reinterpret(T, reinterpret(UT, x) + (((e % UT) << significand_bits(T)) % UT))
 end
-@inline function ldexp3k(x::SVec{W,T}, e::IntegerType) where {W,T<:Union{Float32,Float64}}
+@inline function ldexp3k(x::Vec{W,T}, e::IntegerType) where {W,T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
-    reinterpret(SVec{W,T}, reinterpret(SVec{W,UT}, x) + (((e % UT) << significand_bits(T)) % UT))
+    reinterpret(Vec{W,T}, reinterpret(Vec{W,UT}, x) + (((e % UT) << significand_bits(T)) % UT))
 end
 
 # threshold values for `ilogbk`
@@ -86,8 +86,8 @@ where `significand ∈ [1, 2)`.
     q = float2integer(d) & I(exponent_raw_max(T))
     q = vifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
 end
-# @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(SVec(SIMDPirates.extract_data(d)))
-# @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(SVec(SIMDPirates.extract_data(d)))
+# @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(Vec(SIMDPirates.extract_data(d)))
+# @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(Vec(SIMDPirates.extract_data(d)))
 # similar to ilogbk, but argument has to be a normalized float value
 @inline function ilogb2k(d::FloatType)
     T = eltype(d)
@@ -146,11 +146,11 @@ end
 end
 
 @inline calcq(::Type{T}, xlo) where {T <: Union{Float32,Float64}} = (I = fpinttype(T); ifelse(xlo, -2 % I, zero(I)))
-@inline function calcq(::Type{V}, xlo) where {W, T, V <: SVec{W,T}}
+@inline function calcq(::Type{V}, xlo) where {W, T, V <: Vec{W,T}}
     I = fpinttype(T)
-    vifelse(xlo, vbroadcast(SVec{W,I}, -2 % I), vzero(SVec{W,I}))
+    vifelse(xlo, vbroadcast(Vec{W,I}, -2 % I), vzero(Vec{W,I}))
 end
-@inline function atan2k_fast(y::V, x::V) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function atan2k_fast(y::V, x::V) where {T<:Union{Float32,Float64},V<:Union{T,Vec{<:Any,T}}}
     xl0 = x < 0
     I = fpinttype(T)
     q = calcq(V, xl0)
@@ -168,11 +168,11 @@ end
     q * T(PI_2) + t
 end
 
-@inline function atan2k(y::Double{V}, x::Double{V}) where {T,V<:Union{T,SVec{<:Any,T}}}
+@inline function atan2k(y::Double{V}, x::Double{V}) where {T,V<:Union{T,Vec{<:Any,T}}}
     xl0 = x < 0
     I = fpinttype(T)
-    if V <: SVec
-        q = vifelse(xl0, SVec{length(x.hi),I}(-2), zero(I))
+    if V <: Vec
+        q = vifelse(xl0, Vec{length(x.hi),I}(-2), zero(I))
     else
         q = vifelse(xl0, I(-2), zero(I))
     end
@@ -224,7 +224,7 @@ end
     return @horner x c1 c2 c3 c4 c5
 end
 
-@inline function expk(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function expk(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,Vec{<:Any,T}}}
     q = round(V(d) * V(MLN2E))
     qi = unsafe_trunc(fpinttype(T), q)
 
@@ -271,7 +271,7 @@ end
     return dadd(dmul(x, u), c1)
 end
 
-@inline function expk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function expk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,Vec{<:Any,T}}}
     q = round(V(d) * T(MLN2E))
     qi = unsafe_trunc(fpinttype(T), q)
 
@@ -311,7 +311,7 @@ end
     return @horner x c1 c2 c3 c4
 end
 
-@inline function logk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function logk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,Vec{<:Any,T}}}
     e  = ilogbk(d.hi * T(1.0/0.75))
     m  = scale(d, pow2i(T, -e))
 

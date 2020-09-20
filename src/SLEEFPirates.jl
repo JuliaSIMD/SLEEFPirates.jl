@@ -5,16 +5,16 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMDVector, _Vec, FMA_FAST
+using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST
 using IfElse: ifelse
 
 export Vec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
 
-const FloatType64 = Union{Float64,AbstractSIMDVector{<:Any,Float64}}
-const FloatType32 = Union{Float32,AbstractSIMDVector{<:Any,Float32}}
+const FloatType64 = Union{Float64,AbstractSIMD{<:Any,Float64}}
+const FloatType32 = Union{Float32,AbstractSIMD{<:Any,Float32}}
 const FloatType = Union{FloatType64,FloatType32}
-const IntegerType64 = Union{Int64,AbstractSIMDVector{<:Any,Int64}}
-const IntegerType32 = Union{Int32,AbstractSIMDVector{<:Any,Int32}}
+const IntegerType64 = Union{Int64,AbstractSIMD{<:Any,Int64}}
+const IntegerType32 = Union{Int32,AbstractSIMD{<:Any,Int32}}
 const IntegerType = Union{IntegerType64,IntegerType32}
 
 fpinttype(::Type{Float64}) = Int
@@ -135,38 +135,34 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
-        @inline $func(x::Vec) = data($func(Vec(x)))
-        @inline $func(x::AbstractSIMDVector) = $func(Vec(data(x)))
-        @inline $func(v::Vec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(Vec{W,Float64}, v))
-        @inline $func(v::Vec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(Vec{W,Float32}, v))
-        @inline $func(i::_MM) = $func(svrange(i))
+        @inline $func(x::AbstractSIMD) = $func(Vec(data(x)))
+        @inline $func(v::Vec{W,I}) where {W,I<:Integer} = $func(float(v))
+        @inline $func(i::MM) = $func(Vec(i))
     end
 end
-Tπ(::Type{T}) where {T} = promote_type(T, typeof(π))(π)
+# Tπ(::Type{T}) where {T} = promote_type(T, typeof(π))(π)
 for func ∈ (:sin, :cos)
     funcpi = Symbol(func, :pi)
     funcfast = Symbol(func, :_fast)
     funcpifast = Symbol(func, :pi_fast)
-    @eval @inline $funcpi(v::Vec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline Base.$funcpi(v::Vec{W,T}) where {W,T} = $func(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline $funcpifast(v::Vec{W,T}) where {W,T} = $funcfast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-    @eval @inline $funcpi(v::_Vec{W,T}) where {W,T} = data($func(Vec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
-    @eval @inline $funcpi(i::_MM) = $funcpi(svrange(i))
-    @eval @inline $funcpifast(v::_Vec{W,T}) where {W,T} = data($funcfast(Vec(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))))
+    @eval @inline $funcpi(v::Vec{W,T}) where {W,T} = $func(vbroadcast(Val{W}(), Tπ(T) * v))
+    @eval @inline Base.$funcpi(v::Vec{W,T}) where {W,T} = $func(T(π) * v)
+    @eval @inline $funcpifast(v::Vec{W,T}) where {W,T} = $funcfast(T(π) * v)
+    @eval @inline $funcpi(i::MM) = $funcpi(Vec(i))
 end
-@inline sincospi(v::AbstractStructVec{W,T}) where {W,T} = sincos(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-@inline sincospi_fast(v::AbstractStructVec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(Val{W}(), Tπ(T)), v))
-@inline sincospi(v::_Vec{W,T}) where {W,T} = sincos(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
-@inline sincospi_fast(v::_Vec{W,T}) where {W,T} = sincos_fast(vmul(vbroadcast(_Vec{W,T}, Tπ(T)), v))
+@inline sincospi(v::AbstractSIMD{W,T}) where {W,T} = sincos(T(π) * v)
+@inline sincospi_fast(v::AbstractSIMD{W,T}) where {W,T} = sincos_fast(T(π) * v)
+@inline sincospi(v::Vec{W,T}) where {W,T} = sincos(T(π) * v)
+@inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
-    @eval @inline Base.$func(x::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
-    @eval @inline Base.$func(x::_MM) = $func(x)
+    @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
+    @eval @inline Base.$func(x::MM) = $func(Vec(x))
 end
 for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
     func_fast = Symbol(func, :_fast)
-    @eval @inline Base.$func(x::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
-    @eval @inline Base.$func(x::_MM) = $func_fast(x)
+    @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
+    @eval @inline Base.$func(x::MM) = $func_fast(Vec(x))
 end
 
 for func in (:atan, :hypot, :pow)
@@ -174,17 +170,14 @@ for func in (:atan, :hypot, :pow)
     @eval begin
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
-        @inline $func(a::AbstractSIMDVector, b::AbstractSIMDVector) = $func(Vec(data(a)),Vec(data(b)))
-        @inline $func(x::Vec, y::Vec) = data($func(Vec(x), Vec(y)))
-        @inline Base.$func2(x::AbstractStructVec{W,T}, y::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, Vec(y))
-        @inline Base.$func2(x::Vec{W,T}, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
-        @inline Base.$func2(x::AbstractStructVec{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, vconvert(Vec{W,T},y))
-        @inline Base.$func2(x::T, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(vconvert(Vec{W,T},x), y)
-        @inline Base.$func2(x::AbstractStructVec{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, vconvert(Vec{W,T1},T1(y)))
-        @inline Base.$func2(x::T2, y::AbstractStructVec{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(vconvert(Vec{W,T1},T1(x)), y)
-        @inline Base.$func2(x::AbstractStructVec{W,T}, y::AbstractStructVec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
-        @inline $func(v1::Vec{W,I}, v2::Vec{W,I}) where {W,I<:Union{UInt64,Int64}} = $func(vconvert(Vec{W,Float64}, v1), vconvert(Vec{W,Float64}, v2))
-        @inline $func(v1::Vec{W,I}, v2::Vec{W,I}) where {W,I<:Union{UInt32,Int32}} = $func(vconvert(Vec{W,Float32}, v1), vconvert(Vec{W,Float32}, v2))
+        # @inline Base.$func2(x::AbstractSIMD{W,T}, y::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, Vec(y))
+        # @inline Base.$func2(x::Vec{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
+        @inline Base.$func2(x::AbstractSIMD{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, convert(Vec{W,T}, y))
+        @inline Base.$func2(x::T, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(convert(Vec{W,T}, x), y)
+        @inline Base.$func2(x::AbstractSIMD{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2} = $func(x, convert(Vec{W,T1}, y))
+        @inline Base.$func2(x::T2, y::AbstractSIMD{W,T1}) where {W,T1<:Union{Float32,Float64},T2} = $func(convert(Vec{W,T1}, x), y)
+        @inline Base.$func2(x::AbstractSIMD{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
+        @inline $func(v1::AbstractSIMD{W,I}, v2::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v1), float(v2))
     end
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
@@ -198,22 +191,22 @@ end
     data(s), data(c)
 end
 @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(1,x)))
-@inline logit(x::AbstractStructVec{W,T}) where {W,T} = Vec(log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
-@inline logit(x::_Vec{W,T}) where {W,T} = log(vfdiv(x,vsub(vbroadcast(_Vec{W,T},one(T)),x)))
+@inline logit(x::AbstractSIMD{W,T}) where {W,T} = Vec(log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
+# @inline logit(x::Vec{W,T}) where {W,T} = log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x)))
 @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(Base.FastMath.sub_fast(x))))
-@inline invlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
-@inline invlogit(x::_Vec{W,T}) where {W,T} = vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(vsub(x))))
+@inline invlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
+# @inline invlogit(x::Vec{W,T}) where {W,T} = vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
 @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(1,x), x))
-@inline nlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
-@inline nlogit(x::_Vec{W,T}) where {W,T} = log(vfdiv(vsub(vbroadcast(_Vec{W,T},one(T)),x),x))
+@inline nlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
+# @inline nlogit(x::Vec{W,T}) where {W,T} = log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x))
 @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(x)))
-@inline ninvlogit(x::AbstractStructVec{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
-@inline ninvlogit(x::_Vec{W,T}) where {W,T} = vfdiv( vbroadcast(_Vec{W,T},one(T)), vadd(vbroadcast(_Vec{W,T},one(T)), exp(x)))
-@inline vexp(v::AbstractStructVec{W,Float32}) where {W} = exp(v)
-@inline vlog(v::AbstractStructVec{W,Float32}) where {W} = log(v)
+@inline ninvlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
+# @inline ninvlogit(x::Vec{W,T}) where {W,T} = vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x)))
+@inline vexp(v::AbstractSIMD{W,Float32}) where {W} = exp(v)
+@inline vlog(v::AbstractSIMD{W,Float32}) where {W} = log(v)
 @inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
-@inline log1m(v::_Vec{W,T}) where {W,T} = log1p(vsub(v))
-@inline log1m(v::AbstractStructVec{W,T}) where {W,T} = log1p(vsub(v))
+# @inline log1m(v::Vec{W,T}) where {W,T} = log1p(vsub(v))
+@inline log1m(v::AbstractSIMD{W,T}) where {W,T} = log1p(vsub(v))
 @inline function tanh_fast(x)
     exp2x = exp(x + x)
     (exp2x - one(x)) / (exp2x + one(x))

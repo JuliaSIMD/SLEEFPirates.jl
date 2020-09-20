@@ -75,8 +75,8 @@ const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     Ndef1 = :(reinterpret(UInt64, N_float))
     Ndef1 = VectorizationBase.AVX512DQ ? Ndef1 : :($Ndef1 % UInt32)
-    twopkpreshift = :(vadd(k, 0x0000000000000035))
-    twopkpreshift = VectorizationBase.AVX512DQ ? twopkpreshift : :($twopkpreshift % UInt64)
+    # twopkpreshift = :(VectorizationBase.vadd(k, 0x0000000000000035))
+    twopkpreshift = VectorizationBase.AVX512DQ ? :k : :(k % UInt64)
     FF = VectorizationBase.AVX512DQ ? 0x00000000000000ff : 0x000000ff
     @eval begin
         
@@ -84,15 +84,17 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
             N = $Ndef1
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
-            
+            # @show N_float
             r = muladd(N_float, LogBo256U($base, Float64), x)
             r = muladd(N_float, LogBo256L($base, Float64), r)
-            js = vload(stridedpointer(J_TABLE), (N & $FF,))
+            # @show r (N & $FF)
+            js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & $FF,))
+            # @show js
             k = N >>> 8
             
             small_part = reinterpret(UInt64, muladd(js, expm1b_kernel($base, r), js))
             twopk = $twopkpreshift << 0x0000000000000034
-            
+            # @show k small_part twopk twopk + small_part
             res = reinterpret(Float64, twopk + small_part)
             res = ifelse(x >= MAX_EXP($base, Float64), Inf, res)
             res = ifelse(x <= MIN_EXP($base, Float64), 0.0, res)

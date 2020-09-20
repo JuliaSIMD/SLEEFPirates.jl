@@ -10,14 +10,14 @@ end
 @inline function Double(x::Vec, y::Vec)
     Double(Vec(extract_data(x)), Vec(extract_data(y)))
 end
-@inline promote_vtype(::Type{Mask{W,U}}, ::Type{Double{V}}) where {W, U, T, V <: AbstractSIMDVector{W,T}} = Double{V}
-@inline promote_vtype(::Type{Double{V}}, ::Type{Mask{W,U}}) where {W, U, T, V <: AbstractSIMDVector{W,T}} = Double{V}
+@inline promote_vtype(::Type{Mask{W,U}}, ::Type{Double{V}}) where {W, U, T, V <: AbstractSIMD{W,T}} = Double{V}
+@inline promote_vtype(::Type{Double{V}}, ::Type{Mask{W,U}}) where {W, U, T, V <: AbstractSIMD{W,T}} = Double{V}
 @inline promote_vtype(::Type{Mask{W,U}}, ::Type{Double{T}}) where {W, U, T <: Number} = Double{Vec{W,T}}
 @inline promote_vtype(::Type{Double{T}}, ::Type{Mask{W,U}}) where {W, U, T <: Number} = Double{Vec{W,T}}
-@inline vconvert(::Type{Double{V}}, v::Vec) where {W,T,V <: AbstractSIMDVector{W,T}} = Double(vconvert(V, v), vzero(V))
-@inline vconvert(::Type{Double{V}}, v::V) where {V <: AbstractSIMDVector} = Double(v, vzero(V))
+@inline vconvert(::Type{Double{V}}, v::Vec) where {W,T,V <: AbstractSIMD{W,T}} = Double(vconvert(V, v), vzero(V))
+@inline vconvert(::Type{Double{V}}, v::V) where {V <: AbstractSIMD} = Double(v, vzero(V))
 @inline vconvert(::Type{Double{V}}, m::Mask) where {V} = m
-@inline vconvert(::Type{Double{V}}, d::Double{T}) where {W,T,V<:AbstractSIMDVector{W,T}} = Double(vbroadcast(V, d.hi), vbroadcast(V, d.lo))
+@inline vconvert(::Type{Double{V}}, d::Double{T}) where {W,T,V<:AbstractSIMD{W,T}} = Double(vbroadcast(V, d.hi), vbroadcast(V, d.lo))
 
 (::Type{T})(x::Double{T}) where {T<:vIEEEFloat} = x.hi + x.lo
 

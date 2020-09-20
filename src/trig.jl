@@ -817,9 +817,9 @@ end
     I = fpinttype(eltype(x))
     ifelse(signbit(x), 2 % I, zero(I))
 end
-@inline function atan_fast_q(x::SVec{W}) where {W}
+@inline function atan_fast_q(x::Vec{W}) where {W}
     I = fpinttype(eltype(x))
-    vifelse(signbit(x), vbroadcast(SVec{W,I}, 2 % I), vzero(SVec{W,I}))
+    vifelse(signbit(x), vbroadcast(Vec{W,I}, 2 % I), vzero(Vec{W,I}))
 end
 """
     atan_fast(x)
@@ -941,6 +941,6 @@ Compute the inverse cosine of `x`, where the output is in radians.
 @inline function acos_fast(x::T) where {T<:Union{Float32,Float64}}
     flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), T(M_PI), T(0))
 end
-@inline function acos_fast(x::SVec{W,T}) where {W,T<:Union{Float32,Float64}}
-    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), vbroadcast(SVec{W,T}, T(M_PI)), vzero(SVec{W,T}))
+@inline function acos_fast(x::Vec{W,T}) where {W,T<:Union{Float32,Float64}}
+    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), vbroadcast(Vec{W,T}, T(M_PI)), vzero(Vec{W,T}))
 end
