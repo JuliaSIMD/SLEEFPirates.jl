@@ -528,7 +528,7 @@ declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double
             Vec(llvmcall(("""
         declare <8 x double> @llvm.fmuladd.v8f64(<8 x double>, <8 x double>, <8 x double>)
         declare <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512(<8 x double>, i32, <8 x double>, i8, i32)
-        declare <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double>, <8 x i32>, i8, i32) #16
+        declare <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double>, <8 x i64>, i8, i32) #16
         """, """
           %2 = bitcast <8 x double> %0 to <8 x i64>
           %3 = and <8 x i64> %2, <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>
@@ -574,7 +574,7 @@ declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double
           %39 = fadd <8 x double> %38, %25
           %40 = fadd <8 x double> %39, %37
           %41 = fcmp ole <8 x double> %22, <double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2, double 0xC086232BDD7ABCD2>
-          %42 = tail call <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double> %24, <8 x i32> zeroinitializer, i8 -1, i32 4) #16
+          %42 = tail call <8 x i64> @llvm.x86.avx512.mask.cvttpd2qq.512(<8 x double> %24, <8 x i64> zeroinitializer, i8 -1, i32 4) #16
           %43 = shl <8 x i64> %42, <i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52, i64 52>
           %44 = add <8 x i64> %43, <i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408, i64 4607182418800017408>
           %45 = bitcast <8 x i64> %44 to <8 x double>

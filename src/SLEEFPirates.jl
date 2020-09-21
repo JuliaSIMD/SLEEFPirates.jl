@@ -5,7 +5,7 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST
+using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data
 using IfElse: ifelse
 
 export Vec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m

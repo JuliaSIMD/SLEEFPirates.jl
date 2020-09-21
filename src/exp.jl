@@ -89,12 +89,12 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             r = muladd(N_float, LogBo256L($base, Float64), r)
             # @show r (N & $FF)
             js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & $FF,))
-            # @show js
+            # @show N js
             k = N >>> 8
             
             small_part = reinterpret(UInt64, muladd(js, expm1b_kernel($base, r), js))
             twopk = $twopkpreshift << 0x0000000000000034
-            # @show k small_part twopk twopk + small_part
+            # @show k small_part twopk twopk + small_part r
             res = reinterpret(Float64, twopk + small_part)
             res = ifelse(x >= MAX_EXP($base, Float64), Inf, res)
             res = ifelse(x <= MIN_EXP($base, Float64), 0.0, res)
@@ -122,23 +122,63 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     end
 end
 
-const max_expm1(::Type{<:FloatType64}) = 7.09782712893383996732e2 # log 2^1023*(2-2^-52)
-const max_expm1(::Type{<:FloatType32}) = 88.72283905206835f0 # log 2^127 *(2-2^-23)
+# Oscard Smith
+# https://github.com/JuliaLang/julia/blob/3253fb5a60ad841965eb6bd218921d55101c0842/base/special/expm1.jl
+MAX_EXPM1(::Type{Float64}) =  709.7827128933845   # log 2^1023*(2-2^-52)
+MIN_EXPM1(::Type{Float64}) = -37.42994775023705   # log 2^-54
+MAX_EXPM1(::Type{Float32}) =  88.72284f0          # log 2^127 *(2-2^-23)
+MIN_EXPM1(::Type{Float32}) = -17.32868f0          # log 2^-25
 
-const min_expm1(::Type{<:FloatType64}) = -37.42994775023704434602223
-const min_expm1(::Type{<:FloatType32}) = -17.3286790847778338076068394f0
+# -ln(2) in upper and lower bits
+# Upper is truncated to only have 16 bits of significand since N has at most
+# ceil(log2(-MIN_EXP(n, Float32)*Ln2INV(Float32))) = 8 bits. (19 for Float64)
+# This ensures no rounding when multiplying Ln2U*N for FMAless hardware
+Ln2INV(::Type{Float32}) = 1.442695
+Ln2U(::Type{Float32}) = -0.69314575
+Ln2L(::Type{Float32}) = -1.4286068e-6
+Ln2INV(::Type{Float64}) = 1.4426950408889634
+Ln2U(::Type{Float64}) = -0.6931471805437468
+Ln2L(::Type{Float64}) = -1.619851018665656e-11
 
-# """
-#     expm1(x)
 
-# Compute `eˣ- 1` accurately for small values of `x`.
-# """
-# @inline function expm1(x::FloatType)
-#     T = eltype(x)
-#     v = dadd2(expk2(Double(x)), -T(1.0))
-#     u = v.hi + v.lo
-#     u = vifelse(x > max_expm1(T), T(Inf), u)
-#     u = vifelse(x < min_expm1(T), T(-1.0), u)
-#     # u = vifelse(isnegzero(x), T(-0.0), u)
-#     return u
-# end
+@inline function expm1_kernel(x::FloatType64)
+    hi_order = evalpoly(x, (0.1666666666666668, 0.041666666666666706, 0.0083333333333196,
+                            0.0013888888888864692, 0.00019841269890049138, 2.4801587363805883e-5,
+                            2.7557240916652906e-6, 2.755724050237237e-7, 2.511003824738655e-8,
+                            2.092503179646227e-9))
+    return exthorner(x, (1.0, 0.5, hi_order))
+end
+@inline function expm1_kernel(x::FloatType32)
+    hi_order = evalpoly(x, ((0.16666667f0, 0.04166648f0, 0.008333283f0, 0.0013933307f0, 0.00019909571f0)))
+    return exthorner(x, (1.0f0, 0.5f0, hi_order))
+end
+
+if VectorizationBase.AVX512DQ
+    @eval inttype(::Type{Float64}) = Int64
+else
+    @eval inttype(::Type{Float64}) = Int32
+end
+inttype(::Type{Float32}) = Int32
+
+@inline function expm1(x::FloatType)
+    T = eltype(x)
+    N_float = round(x*Ln2INV(T))
+    N = unsafe_trunc(inttype(T), N_float)
+    r = muladd(N_float, Ln2U(T), x)
+    r = muladd(N_float, Ln2L(T), r)
+    hi, lo = expm1_kernel(r)
+    small_part = r*hi
+    small_round = fma(r, lo, fma(r, hi, -small_part))
+    twopk = reinterpret(T, ((N%UInt32) +uinttype(T)(exponent_bias(T))) << uinttype(T)(significand_bits(T)))
+    
+    # if !(abs(x)<=MIN_EXPM1(T))
+    #     isnan(x) && return x
+    #     x > MAX_EXPM1(T) && return T(Inf)
+    #     x < MIN_EXPM1(T) && return T(-1)
+    #     if N == exponent_max(T)
+    #         return muladd(small_part, T(2), T(2)) * T(2)^(exponent_max(T)-1)
+    #     end
+    # end
+    return fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))
+end
+
