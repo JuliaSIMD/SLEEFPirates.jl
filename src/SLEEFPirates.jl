@@ -5,10 +5,10 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data
-using IfElse: ifelse
+using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, vsub, vmul, VecUnroll
+import IfElse: ifelse
 
-export Vec, loggamma, logit, invlogit, nlogit, ninvlogit, log1m
+export Vec, logit, invlogit, nlogit, ninvlogit, log1m, tanh_fast#, loggamma
 
 const FloatType64 = Union{Float64,AbstractSIMD{<:Any,Float64}}
 const FloatType32 = Union{Float32,AbstractSIMD{<:Any,Float32}}
@@ -121,9 +121,9 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 #         @warn "Building SLEEFPirates is likely to increase performance of some functions."
 #     end
 # end
-include("lgamma.jl")
-include("sleef.jl")
-include("xsimd.jl")
+# include("lgamma.jl")
+# include("sleef.jl")
+# include("xsimd.jl")
 
 @inline Base.exp(x::Vec) = exp(x)
 
@@ -135,8 +135,7 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
-        @inline $func(x::AbstractSIMD) = $func(Vec(data(x)))
-        @inline $func(v::Vec{W,I}) where {W,I<:Integer} = $func(float(v))
+        @inline $func(v::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v))
         @inline $func(i::MM) = $func(Vec(i))
     end
 end
@@ -182,49 +181,19 @@ for func in (:atan, :hypot, :pow)
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
-@inline function sincos(x::Vec)
-    s, c = sincos(Vec(x))
-    data(s), data(c)
-end
-@inline function sincos_fast(x::Vec)
-    s, c = sincos_fast(Vec(x))
-    data(s), data(c)
-end
 @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(1,x)))
-@inline logit(x::AbstractSIMD{W,T}) where {W,T} = Vec(log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x))))
-# @inline logit(x::Vec{W,T}) where {W,T} = log(vfdiv(x,vsub(vbroadcast(Vec{W,T},one(T)),x)))
+@inline logit(x::AbstractSIMD{W,T}) where {W,T} = log(x / (vbroadcast(Val{W}(),one(T)) - x))
 @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(Base.FastMath.sub_fast(x))))
-@inline invlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x)))))
-# @inline invlogit(x::Vec{W,T}) where {W,T} = vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(vsub(x))))
+@inline invlogit(x::AbstractSIMD{W,T}) where {W,T} = (o = vbroadcast(Val{W}(),one(T)); (o / (o + exp(-x))))
 @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(1,x), x))
-@inline nlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x)))
-# @inline nlogit(x::Vec{W,T}) where {W,T} = log(vfdiv(vsub(vbroadcast(Vec{W,T},one(T)),x),x))
+@inline nlogit(x::AbstractSIMD{W,T}) where {W,T} = log((vbroadcast(Val{W}(),one(T)) - x) / x)
 @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(x)))
-@inline ninvlogit(x::AbstractSIMD{W,T}) where {W,T} = Vec(vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x))))
-# @inline ninvlogit(x::Vec{W,T}) where {W,T} = vfdiv( vbroadcast(Vec{W,T},one(T)), vadd(vbroadcast(Vec{W,T},one(T)), exp(x)))
-@inline vexp(v::AbstractSIMD{W,Float32}) where {W} = exp(v)
-@inline vlog(v::AbstractSIMD{W,Float32}) where {W} = log(v)
+@inline ninvlogit(x::AbstractSIMD{W,T}) where {W,T} = inv(vbroadcast(Val{W}(), one(T)) + exp(x))
 @inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
-# @inline log1m(v::Vec{W,T}) where {W,T} = log1p(vsub(v))
-@inline log1m(v::AbstractSIMD{W,T}) where {W,T} = log1p(vsub(v))
+@inline log1m(v::AbstractSIMD{W,T}) where {W,T} = log1p(-v)
 @inline function tanh_fast(x)
-    exp2x = exp(x + x)
-    (exp2x - one(x)) / (exp2x + one(x))
-end
-
-"""
-    register(;fast = false)
-
-Register functions in `SLEEFPirates.jl` into `Base`. If `fast` is `true`, register faster variants if exist.
-"""
-function register(;fast = false)
-    for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :exp, :exp2, :exp10, :expm1)
-        @eval Base.$func(x::Union{Float32, Float64}) = $func(x)
-    end
-    for func in (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt)
-        fastfunc = fast ? Symbol(string(func) * "_fast") : func
-        @eval Base.$func(x::Union{Float32, Float64}) = $fastfunc(x)
-    end
+    exp2xm1 = expm1(x + x)
+    exp2xm1 / (exp2xm1 + typeof(x)(2))
 end
 
 if Sys.islinux() && Sys.ARCH === :x86_64

@@ -88,23 +88,90 @@ end
 
 strip_module_name(f::Function) = last(split(string(f), '.')) # strip module name from function f
 
-function test_vector(xfun, fun, ::Val{W}, x1::T) where {W,T<:Number}
-    offset = x1 < 1 ? 0 : 1
-    vxes1 = SVec(ntuple(w -> Core.VecElement{T}(offset + w / (W + 1)), Val(W)))
-    v1 = xfun(vxes1)
-    t2 = ntuple(w -> T(fun(offset + big(w) / (W + 1))), Val(W))
-    t1 = ntuple(w -> v1[w], Val(W))
-    @test all(t1 .≈ t2)
-end
-function test_vector(xfun, fun, ::Val{W}, ::NTuple{N,T}) where {W,N,T}
-    if VERSION < v"1.3" && !ispow2(W)
-        return
+
+function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
+    N = _N + 1; i = 0
+    x = Vector{T}(undef, N * W)
+    for n ∈ 1:N
+        v = u.data[n]
+        for w ∈ 1:W
+            x[(i += 1)] = VectorizationBase.getelement(v, w)
+        end
     end
-    vxes1 = ntuple(i -> SVec(ntuple(w -> Core.VecElement{T}(w + i), Val(W))), Val(N))
-    v1 = xfun(vxes1...)
-    t2 = ntuple(w -> T(fun(ntuple(n -> big(n)+w, Val(N))...)), Val(W))
-    t1 = ntuple(w -> v1[w], length(v1))
-    @test all(t1 .≈ t2)
+    x
+end
+tovector(v::VectorizationBase.AbstractSIMDVector{W}) where {W} = [VectorizationBase.getelement(v,w) for w ∈ 1:W]
+
+function test_vector(xfun, fun, ::Val{W}, xf::T, xl::T, tol) where {W,T<:Number}
+    xf = nextfloat(xf); xl = prevfloat(xl);
+    δ = xl - xf
+    loginputs = (δ > 1e3) & (xf > 0)
+    if loginputs
+        xf = log(xf)
+        δ = log(xl) - xf
+    end
+    denom = 5W + 1
+    vxes1 = Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (w / denom)), Val(W)))
+    vu = VectorizationBase.VecUnroll((
+        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (( W + w) / denom)), Val(W))),
+        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((2W + w) / denom)), Val(W))),
+        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((3W + w) / denom)), Val(W))),
+        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((4W + w) / denom)), Val(W)))
+    ))
+    if loginputs
+        vxes1 = exp(vxes1)
+        vu = exp(vu)
+    end
+    t1 = tovector(xfun(vxes1));
+    # @show xf, xl
+    t2 = T.(fun.(big.(tovector(vxes1))));
+    # if t1 ≉ t2
+        # @show vxes1
+    # end
+    # @test t1 ≈ t2
+    # @show W
+    @test maximum(countulp.(t1, t2)) ≤ tol
+    tu1 = tovector(xfun(vu));
+    tu2 = T.(fun.(big.(tovector(vu))));
+    @test maximum(countulp.(tu1, tu2)) ≤ tol
+    # @test tu1 ≈ tu2
+end
+vbig(x) = big.(x)
+function test_vector(xfun, fun, ::Val{W}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol) where {W,N,T}
+    xf = nextfloat.(xf); xl = prevfloat.(xl);
+    δ = xl .- xf
+    denom = 5W + 1
+    loginputs = any(δ .> 1e3) && all(xf .> -1)
+    if loginputs
+        xf = log.(xf)
+        δ = log.(xl) .- xf
+    end
+    vxes1 = ntuple(Val(N)) do n
+        Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * (w / denom)), Val(W)))
+    end
+    vu = ntuple(Val(N)) do n
+        VectorizationBase.VecUnroll((
+            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * (( W + w) / denom)), Val(W))),
+            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((2W + w) / denom)), Val(W))),
+            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((3W + w) / denom)), Val(W))),
+            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((4W + w) / denom)), Val(W)))
+        ))
+    end
+    if loginputs
+        vxes1 = exp.(vxes1)
+        vu = exp.(vu)
+    end
+    t1 = tovector(xfun(vxes1...))
+    t2 = T.(fun.(vbig.(tovector.(vxes1))...))
+    # if t1 ≉ t2
+        # @show vxes1
+    # end
+    @test maximum(countulp.(t1, t2)) ≤ tol
+    # @test t1 ≈ t2
+    tu1 = tovector(xfun(vu...))
+    tu2 = T.(fun.(vbig.(tovector.(vu))...))
+    @test maximum(countulp.(tu1, tu2)) ≤ tol
+    # @test tu1 ≈ tu2
 end
 
 # test the accuracy of a function where fun_table is a Dict mapping the function you want
@@ -142,12 +209,19 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
         # Vector test is mostly to make sure that they do not error
         # Results should either be the same as scalar
         # Or they're from another library (e.g., GLIBC), and may differ slighlty
-        test_vector(xfun, fun, VectorizationBase.pick_vector_width_val(T), first(xx))
-        test_vector(xfun, fun, Val(2), first(xx))
-        test_vector(xfun, fun, Val(4), first(xx))
-        test_vector(xfun, fun, Val(6), first(xx))
-        test_vector(xfun, fun, Val(8), first(xx))
-        test_vector(xfun, fun, Val(16), first(xx))
+        test_vector(xfun, fun, VectorizationBase.pick_vector_width_val(T), first(xx), last(xx), tol)
+        test_vector(xfun, fun, Val(2), first(xx), last(xx), tol)
+        W = VectorizationBase.pick_vector_width(T)
+        if W ≥ 4
+            test_vector(xfun, fun, Val(4), first(xx), last(xx), tol)
+        end
+        if W ≥ 8
+            test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
+            test_vector(xfun, fun, Val(8), first(xx), last(xx), tol)
+        end
+        if W ≥ 16
+            test_vector(xfun, fun, Val(16), first(xx), last(xx), tol)
+        end
     end
 end
 

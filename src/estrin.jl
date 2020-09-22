@@ -2,7 +2,7 @@
 @generated function estrin(x, p::NTuple{N}) where {N}
     # N = length(p)
     # log2N = VectorizationBase.intlog2(N)
-    ex = quote $(Expr(:meta,:inline)) end
+    ex = Expr(:block, Expr(:meta, :inline))
     Nfrac1 = N >> 1
     nextp = :p_1_
     nextx = :x_1

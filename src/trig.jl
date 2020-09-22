@@ -56,8 +56,9 @@ end
     u = V(v)
 
     qli = unsafe_trunc(fpinttype(T), ql)
-    u = vifelse(qli & 1 != 0, -u, u)
-    u = vifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    u = ifelse(qli & 1 != 0, -u, u)
+    # u = ifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -82,8 +83,9 @@ end
     u = V(v)
 
     qi = unsafe_trunc(fpinttype(T), q)
-    u = vifelse(qi & one(I) != zero(I), -u, u)
-    # u = vifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    u = ifelse(qi & one(I) != zero(I), -u, u)
+    # u = ifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -114,8 +116,8 @@ end
     u = V(v)
 
     qli = unsafe_trunc(fpinttype(T), ql)
-    u = vifelse(qli & I(2) == zero(I), -u, u)
-    # u = vifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
+    u = ifelse(qli & I(2) == zero(I), -u, u)
+    # u = ifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -125,7 +127,7 @@ end
     I = fpinttype(T)
     d = abs(d)
 
-    @fastmath q = one(I) + I(2)*round(d * T(M_1_PI) + T(-0.5))
+    q = one(I) + I(2)*round(d * T(M_1_PI) + T(-0.5))
 
     s = dadd2(d, q * PI_A(T)* T(-0.5))
     s = dadd2(s, q * PI_B(T)* T(-0.5))
@@ -142,8 +144,8 @@ end
     u = V(v)
 
     qi = unsafe_trunc(fpinttype(T), q)
-    u = vifelse(qi & I(2) == zero(I), -u, u)
-    u = vifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
+    u = ifelse(qi & I(2) == zero(I), -u, u)
+    # u = ifelse(~isinf(d) & (d > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -209,12 +211,13 @@ end
     s = d * d
 
     qli = unsafe_trunc(fpinttype(T), ql)
-    d = vifelse(qli & one(I) != zero(I), -d, d)
+    d = ifelse(qli & one(I) != zero(I), -d, d)
 
     u = sincos_fast_kernel(s)
     u = muladd(s, u * d, d)
 
-    u = vifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(t)) & ((abs(t) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -234,13 +237,14 @@ end
     s = d * d
 
     qli = unsafe_trunc(fpinttype(T), q)
-    d = vifelse(qli & one(I) != zero(I), -d, d)
+    d = ifelse(qli & one(I) != zero(I), -d, d)
 
     u = sincos_fast_kernel(s)
 
     u = muladd(s, u * d, d)
 
-    u = vifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(t)) & ((abs(t) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -264,12 +268,12 @@ end
     s = d * d
 
     qli = unsafe_trunc(fpinttype(T), ql)
-    d = vifelse(qli & I(2) == zero(I), -d, d)
+    d = ifelse(qli & I(2) == zero(I), -d, d)
 
     u = sincos_fast_kernel(s)
     u = muladd(s, u * d, d)
 
-    u = vifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
+    # u = ifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -279,7 +283,7 @@ end
     I = fpinttype(T)
     t = d
 
-    @fastmath q = one(I) + I(2)*round(d * T(M_1_PI) - T(0.5))
+    q = one(I) + I(2)*round(d * T(M_1_PI) - T(0.5))
 
     d = muladd(q, -PI_A(T) * T(0.5), d)
     d = muladd(q, -PI_B(T) * T(0.5), d)
@@ -289,13 +293,13 @@ end
     s = d * d
 
     qi = unsafe_trunc(fpinttype(T), q)
-    d = vifelse(qi & I(2) == zero(I), -d, d)
+    d = ifelse(qi & I(2) == zero(I), -d, d)
 
     u = sincos_fast_kernel(s)
 
     u = muladd(s, u * d, d)
 
-    u = vifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
+    # u = ifelse(~isinf(t) & (abs(t) > TRIG_MAX(T)), T(0.0), u)
 
     return u
 end
@@ -380,7 +384,7 @@ end
 
     rx = t + u
 
-    rx = vifelse(isnegzero(d), T(-0.0), rx)
+    # rx = ifelse(isnegzero(d), T(-0.0), rx)
 
     u = sincos_b_kernel(s)
 
@@ -388,18 +392,18 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     qli_odd = qli & one(I) != zero(I)
-    s = vifelse(qli_odd, ry, s)
-    ry = vifelse(qli_odd, rx, ry)
-    rx = vifelse(qli_odd, s, rx)
-    rx = vifelse(qli & I(2) != zero(I), -rx, rx)
-    ry = vifelse((qli + one(I)) & I(2) != zero(I), -ry, ry)
+    s = ifelse(qli_odd, ry, s)
+    ry = ifelse(qli_odd, rx, ry)
+    rx = ifelse(qli_odd, s, rx)
+    rx = ifelse(qli & I(2) != zero(I), -rx, rx)
+    ry = ifelse((qli + one(I)) & I(2) != zero(I), -ry, ry)
 
     # absd_g_trig_max = abs(d) > TRIG_MAX(T)
-    # rx = vifelse(absd_g_trig_max, T(0.0), rx)
-    # ry = vifelse(absd_g_trig_max, T(0.0), ry)
+    # rx = ifelse(absd_g_trig_max, T(0.0), rx)
+    # ry = ifelse(absd_g_trig_max, T(0.0), ry)
     # isinfd = isinf(d)
-    # rx = vifelse(isinfd, T(NaN), rx)
-    # ry = vifelse(isinfd, T(NaN), ry)
+    # rx = ifelse(isinfd, T(NaN), rx)
+    # ry = ifelse(isinfd, T(NaN), ry)
 
     return (rx, ry)
 end
@@ -425,7 +429,7 @@ end
 
     rx = t + u
 
-    rx = vifelse(isnegzero(d), T(-0.0), rx)
+    # rx = ifelse(isnegzero(d), T(-0.0), rx)
 
     u = sincos_b_kernel(s)
 
@@ -433,19 +437,19 @@ end
 
     qi = unsafe_trunc(fpinttype(T), q)
     qi_isodd = qi & one(I) != zero(I)
-    s = vifelse(qi_isodd, ry, s)
-    ry = vifelse(qi_isodd, rx, ry)
-    rx = vifelse(qi_isodd, s, rx)
-    rx = vifelse(qi & I(2) != zero(I), -rx, rx)
-    ry = vifelse((qi + one(I)) & I(2) != zero(I), -ry, ry)
+    s = ifelse(qi_isodd, ry, s)
+    ry = ifelse(qi_isodd, rx, ry)
+    rx = ifelse(qi_isodd, s, rx)
+    rx = ifelse(qi & I(2) != zero(I), -rx, rx)
+    ry = ifelse((qi + one(I)) & I(2) != zero(I), -ry, ry)
 
     # absd_g_trig_max = abs(d) > TRIG_MAX(T)
-    # rx = vifelse(absd_g_trig_max, T(0.0), rx)
-    # ry = vifelse(absd_g_trig_max, T(0.0), ry)
+    # rx = ifelse(absd_g_trig_max, T(0.0), rx)
+    # ry = ifelse(absd_g_trig_max, T(0.0), ry)
     #
     # isinfd = isinf(d)
-    # rx = vifelse(isinfd, T(NaN), rx)
-    # ry = vifelse(isinfd, T(NaN), ry)
+    # rx = ifelse(isinfd, T(NaN), rx)
+    # ry = ifelse(isinfd, T(NaN), ry)
 
     return (rx, ry)
 end
@@ -474,7 +478,7 @@ end
     v  = dadd(t, u)
     rx = V(v)
 
-    rx = vifelse(isnegzero(d), T(-0.0), rx)
+    # rx = ifelse(isnegzero(d), T(-0.0), rx)
 
     u  = sincos_b_kernel(sx)
 
@@ -483,19 +487,19 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     qli_odd = qli & 1 != 0
-    u = vifelse(qli_odd, ry, u)
-    ry = vifelse(qli_odd, rx, ry)
-    rx = vifelse(qli_odd, u, rx)
-    rx = vifelse(qli & 2 != 0, -rx, rx)
-    ry = vifelse((qli + 1) & 2 != 0, -ry, ry)
+    u = ifelse(qli_odd, ry, u)
+    ry = ifelse(qli_odd, rx, ry)
+    rx = ifelse(qli_odd, u, rx)
+    rx = ifelse(qli & 2 != 0, -rx, rx)
+    ry = ifelse((qli + 1) & 2 != 0, -ry, ry)
 
     # absd_g_trig_max = abs(d) > TRIG_MAX(T)
-    # rx = vifelse(absd_g_trig_max, T(0.0), rx)
-    # ry = vifelse(absd_g_trig_max, T(0.0), ry)
+    # rx = ifelse(absd_g_trig_max, T(0.0), rx)
+    # ry = ifelse(absd_g_trig_max, T(0.0), ry)
 
     # isinfd = isinf(d)
-    # rx = vifelse(isinfd, T(NaN), rx)
-    # ry = vifelse(isinfd, T(NaN), ry)
+    # rx = ifelse(isinfd, T(NaN), rx)
+    # ry = ifelse(isinfd, T(NaN), ry)
 
     return (rx, ry)
 end
@@ -522,7 +526,7 @@ end
     v  = dadd(t, u)
     rx = V(v)
 
-    rx = vifelse(isnegzero(d), T(-0.0), rx)
+    # rx = ifelse(isnegzero(d), T(-0.0), rx)
 
     u  = sincos_b_kernel(sx)
 
@@ -532,19 +536,19 @@ end
 
     qli = unsafe_trunc(fpinttype(T), q)
     qli_odd = qli & one(I) != zero(I)
-    u = vifelse(qli_odd, ry, u)
-    ry = vifelse(qli_odd, rx, ry)
-    rx = vifelse(qli_odd, u, rx)
-    rx = vifelse(qli & I(2) != zero(I), -rx, rx)
-    ry = vifelse((qli + one(I)) & I(2) != zero(I), -ry, ry)
+    u = ifelse(qli_odd, ry, u)
+    ry = ifelse(qli_odd, rx, ry)
+    rx = ifelse(qli_odd, u, rx)
+    rx = ifelse(qli & I(2) != zero(I), -rx, rx)
+    ry = ifelse((qli + one(I)) & I(2) != zero(I), -ry, ry)
 
     # absd_g_trig_max = abs(d) > TRIG_MAX(T)
-    # rx = vifelse(absd_g_trig_max, T(0.0), rx)
-    # ry = vifelse(absd_g_trig_max, T(0.0), ry)
+    # rx = ifelse(absd_g_trig_max, T(0.0), rx)
+    # ry = ifelse(absd_g_trig_max, T(0.0), ry)
     #
     # isinfd = isinf(d)
-    # rx = vifelse(isinfd, T(NaN), rx)
-    # ry = vifelse(isinfd, T(NaN), ry)
+    # rx = ifelse(isinfd, T(NaN), rx)
+    # ry = ifelse(isinfd, T(NaN), ry)
 
     return (rx, ry)
 end
@@ -612,18 +616,16 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     qli_odd = qli & 1 != 0
-    x = vifelse(qli_odd, -x, x)
+    x = ifelse(qli_odd, -x, x)
 
     u = tan_fast_kernel(s)
 
     u = muladd(s, u * x, x)
 
-    u = vifelse(qli_odd, inv(u), u)
+    u = ifelse(qli_odd, inv(u), u)
 
-    # u = vifelse(
-    #     (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
-    #     T(-0.0), u
-    # )
+    # u = ifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u)
+    # u = ifelse((~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), u)
 
     return u
 end
@@ -644,18 +646,16 @@ end
 
     qli = unsafe_trunc(fpinttype(T), q)
     qli_odd = qli & one(I) != zero(I)
-    x = vifelse(qli_odd, -x, x)
+    x = ifelse(qli_odd, -x, x)
 
     u = tan_fast_kernel(s)
 
     u = muladd(s, u * x, x)
 
-    u = vifelse(qli_odd, inv(u), u)
+    u = ifelse(qli_odd, inv(u), u)
 
-    # u = vifelse(
-    #     (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
-    #     T(-0.0), u
-    # )
+    # u = ifelse( (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), u )
+    # u = ifelse( (~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), u )
 
     return u
 end
@@ -694,7 +694,7 @@ end
 @inline function tan(d::V) where V <: FloatType64
     T = eltype(d)
     qh = trunc(d * (T(M_2_PI)) / (1 << 24))
-    s = dadd2(dmul(Double(T(M_2_PI_H), T(M_2_PI_L)), d), vifelse(d < 0, V(-0.5), V(0.5)) - qh * (1 << 24))
+    s = dadd2(dmul(Double(T(M_2_PI_H), T(M_2_PI_L)), d), ifelse(d < 0, V(-0.5), V(0.5)) - qh * (1 << 24))
     ql = trunc(V(s))
 
     s = dadd2(d, qh * (-PI_A(T) * T(0.5) * (1 << 24)))
@@ -707,7 +707,7 @@ end
 
     qli = unsafe_trunc(fpinttype(T), ql)
     qli_odd = qli & 1 != 0
-    s = vifelse(qli_odd, -s, s)
+    s = ifelse(qli_odd, -s, s)
 
     t = s
     s = dsqu(s)
@@ -717,14 +717,15 @@ end
     x = dadd(T(1.0), dmul(u, s))
     x = dmul(t, x)
 
-    x = vifelse(qli_odd, drec(x), x)
+    x = ifelse(qli_odd, drec(x), x)
 
     v = V(x)
 
-    v = vifelse(
-        (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
-        T(-0.0), v
-    )
+    # v = ifelse(
+    #     (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
+    #     T(-0.0), v
+    # )
+    # v = ifelse((~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), v)
 
     return v
 end
@@ -741,7 +742,7 @@ end
 
     qli = unsafe_trunc(fpinttype(T), q)
     qli_odd = qli & 1 != 0
-    s = vifelse(qli_odd, -s, s)
+    s = ifelse(qli_odd, -s, s)
 
     t = s
     s = dsqu(s)
@@ -752,14 +753,12 @@ end
     x = dadd(T(1.0), dmul(u, s))
     x = dmul(t, x)
 
-    x = vifelse(qli_odd, drec(x), x)
+    x = ifelse(qli_odd, drec(x), x)
 
     v = V(x)
 
-    v = vifelse(
-        (~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))),
-        T(-0.0), v
-    )
+    # v = ifelse((~isinf(d)) & (isnegzero(d) | (abs(d) > TRIG_MAX(T))), T(-0.0), v)
+    # v = ifelse((~isinf(d)) & ((abs(d) > TRIG_MAX(T))), T(-0.0), v)
 
     return v
 end
@@ -772,7 +771,7 @@ Compute the inverse tangent of `x`, where the output is in radians.
 """
 @inline function atan(x::T) where {T<:FloatType}
     u = T(atan2k(Double(abs(x)), Double(T(1))))
-    u = vifelse(isinf(x), T(PI_2), u)
+    # u = ifelse(isinf(x), T(PI_2), u)
     flipsign(u, x)
 end
 
@@ -819,7 +818,7 @@ end
 end
 @inline function atan_fast_q(x::Vec{W}) where {W}
     I = fpinttype(eltype(x))
-    vifelse(signbit(x), vbroadcast(Vec{W,I}, 2 % I), vzero(Vec{W,I}))
+    ifelse(signbit(x), vbroadcast(Val{W}(), 2 % I), vzero(Val{W}(), I))
 end
 """
     atan_fast(x)
@@ -833,15 +832,15 @@ Compute the inverse tangent of `x`, where the output is in radians.
     x = abs(x)
 
     xg1 = x > one(I)
-    x = vifelse(xg1, one(I) / x, x)
-    q = vifelse(xg1, q | one(I), q)
+    x = ifelse(xg1, one(I) / x, x)
+    q = ifelse(xg1, q | one(I), q)
 
     t = x * x
     u = atan_fast_kernel(t)
     # t = x + x * t * u
     t = x * t * u + x
-    t = vifelse(q & one(I) != zero(I), T(PI_2) - t, t)
-    t = vifelse(q & I(2) != zero(I), -t, t)
+    t = ifelse(q & one(I) != zero(I), T(PI_2) - t, t)
+    t = ifelse(q & I(2) != zero(I), -t, t)
     return t
 end
 
@@ -857,19 +856,19 @@ Compute the inverse tangent of `x/y`, using the signs of both `x` and `y` to det
 @inline function atan(x::T, y::T) where {T<:FloatType}
     I = fpinttype(eltype(x))
     absy_under_atan = abs(y) < under_atan2(eltype(y))
-    x = vifelse(absy_under_atan, x * T(Int64(1) << 53), x)
-    y = vifelse(absy_under_atan, y * T(Int64(1) << 53), y)
+    x = ifelse(absy_under_atan, x * T(Int64(1) << 53), x)
+    y = ifelse(absy_under_atan, y * T(Int64(1) << 53), y)
 
     r = T(atan2k(Double(abs(x)), Double(y)))
 
     r = flipsign(r, y)
-    isinfy = isinf(y)
-    r = vifelse(isinfy, T(PI_2) - _sign(y) * T(PI_2), r)
-    r = vifelse(y == zero(T), T(PI_2), r)
-    r = vifelse(isinf(x), vifelse(isinfy, T(PI_2) - _sign(y) * T(PI_4), T(PI_2)), r)
-    r = vifelse(x == zero(T), vifelse(_sign(y) == T(-1), T(M_PI), T(0.0)), r)
+    # isinfy = isinf(y)
+    # r = ifelse(isinfy, T(PI_2) - _sign(y) * T(PI_2), r)
+    # r = ifelse(y == zero(T), T(PI_2), r)
+    # r = ifelse(isinf(x), ifelse(isinfy, T(PI_2) - _sign(y) * T(PI_4), T(PI_2)), r)
+    r = ifelse(x == zero(T), ifelse(y < 0, T(M_PI), T(0.0)), r)
 
-    # return vifelse(isnan(y) | isnan(x), T(NaN), flipsign(r,x))
+    # return ifelse(isnan(y) | isnan(x), T(NaN), flipsign(r,x))
     flipsign(r,x)
 end
 
@@ -882,13 +881,13 @@ Compute the inverse tangent of `x/y`, using the signs of both `x` and `y` to det
 @inline function atan_fast(x::T, y::T) where {T<:FloatType}
     r = atan2k_fast(abs(x), y)
     r = flipsign(r, y)
-    r = vifelse(y == zero(T), T(PI_2), r)
-    infy = isinf(y)
-    r = vifelse(infy, T(PI_2) - _sign(y) * T(PI_2), r)
-    r = vifelse(isinf(x), vifelse(infy, T(PI_2) - _sign(y) * T(PI_4), T(PI_2)), r)
-    r = vifelse(x == zero(T), vifelse(_sign(y) == T(-1), T(M_PI), T(0)), r)
+    r = ifelse(y == zero(T), T(PI_2), r)
+    # infy = isinf(y)
+    # r = ifelse(infy, T(PI_2) - _sign(y) * T(PI_2), r)
+    # r = ifelse(isinf(x), ifelse(infy, T(PI_2) - _sign(y) * T(PI_4), T(PI_2)), r)
+    r = ifelse(x == zero(T), ifelse(y < 0, T(M_PI), T(0)), r)
 
-    # return vifelse(isnan(y) | isnan(x), T(NaN), flipsign(r, x))
+    # return ifelse(isnan(y) | isnan(x), T(NaN), flipsign(r, x))
     flipsign(r, x)
 end
 
@@ -902,7 +901,7 @@ Compute the inverse sine of `x`, where the output is in radians.
 @inline function asin(x::T) where {T<:FloatType}
     d = atan2k(Double(abs(x)), dsqrt(dmul(dadd(T(1), x), dsub(T(1), x))))
     u = T(d)
-    u = vifelse(abs(x) == one(T), T(PI_2), u)
+    u = ifelse(abs(x) == one(T), T(PI_2), u)
     flipsign(u, x)
 end
 
@@ -927,8 +926,8 @@ Compute the inverse cosine of `x`, where the output is in radians.
     T = eltype(x)
     d = atan2k(dsqrt(dmul(dadd(T(1), x), dsub(T(1), x))), Double(abs(x)))
     d = flipsign(d, x)
-    d = vifelse(abs(x) == T(1), Double(T(0)), d)
-    d = vifelse(signbit(x), dadd(MDPI(T), d), d)
+    d = ifelse(abs(x) == T(1), Double(V(T(0))), d)
+    d = ifelse(signbit(x), dadd(MDPI(T), d), d)
     return V(d)
 end
 
@@ -939,8 +938,8 @@ end
 Compute the inverse cosine of `x`, where the output is in radians.
 """
 @inline function acos_fast(x::T) where {T<:Union{Float32,Float64}}
-    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), T(M_PI), T(0))
+    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + ifelse(signbit(x), T(M_PI), T(0))
 end
-@inline function acos_fast(x::Vec{W,T}) where {W,T<:Union{Float32,Float64}}
-    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + vifelse(signbit(x), vbroadcast(Vec{W,T}, T(M_PI)), vzero(Vec{W,T}))
+@inline function acos_fast(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}}
+    flipsign(atan2k_fast(_sqrt((one(T) + x) * (one(T) - x)), abs(x)), x) + ifelse(signbit(x), vbroadcast(Val{W}(), T(M_PI)), vzero(Vec{W,T}))
 end

@@ -55,5 +55,5 @@ This is a fairly bad (slow, unoptimized, not all that accurate) implementation, 
     lg
 end
 
-@inline loggamma(v::Vec) = Vec(loggamma(extract_data(v)))
+@inline loggamma(v::Vec) = Vec(loggamma(data(v)))
 

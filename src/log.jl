@@ -80,7 +80,7 @@ Accurately compute the natural logarithm of 1+x.
     x = ifelse(a > over_log1p(T), T(Inf), x)
     x = ifelse(a < -1, T(NaN), x)
     x = ifelse(a == -1, T(-Inf), x)
-    x = ifelse(isnegzero(a), T(-0.0), x)
+    # x = ifelse(isnegzero(a), T(-0.0), x)
 
     return x
 end
@@ -134,7 +134,7 @@ the natural expoenential function `exp(x)`
 
     t = log_kernel(x2)
 
-    s = dmul(MDLN2(T), convert(V,e))
+    s = dmul(MDLN2(T), convert(T,e))
     s = dadd(s, scale(x, T(2.0)))
     s = dadd(s, x2*x.hi*t)
     r = V(s)
@@ -187,6 +187,8 @@ end
     @horner x c1 c2 c3 c4 c5
 end
 
+@inline narrow(::Type{Float32}, x::Float64) = Float32(x)
+@inline narrow(::Type{Float64}, x::Float64) = x
 """
     log_fast(x)
 
@@ -208,7 +210,7 @@ the natural expoenential function `exp(x)`
 
     t = log_fast_kernel(x2)
 
-    x = x * t + T(MLN2) * e
+    x = x * t + narrow(T, MLN2) * e
 
     x = ifelse(isinf(d), T(Inf), x)
     x = ifelse((d < zero(I)) | isnan(d), T(NaN), x)

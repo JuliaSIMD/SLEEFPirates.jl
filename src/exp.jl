@@ -4,17 +4,17 @@ MAGIC_ROUND_CONST(::Type{Float32}) = 1.2582912f7
 
 # min and max arguments by base and type
 MAX_EXP(::Val{2},  ::Type{Float64}) =  1024.0                   # log2 2^1023*(2-2^-52)
-MIN_EXP(::Val{2},  ::Type{Float64}) = -1075.0                   # log2 2^-1075
+MIN_EXP(::Val{2},  ::Type{Float64}) = -1022.0                   # log2(big(2)^-1023*(2-2^-52))
 MAX_EXP(::Val{2},  ::Type{Float32}) =  128f0                    # log2 2^127*(2-2^-52)
-MIN_EXP(::Val{2},  ::Type{Float32}) = -140f0                    # log2 2^-1075
+MIN_EXP(::Val{2},  ::Type{Float32}) = -126f0                    # log2 2^-1075
 MAX_EXP(::Val{ℯ},  ::Type{Float64}) =  709.782712893383996732   # log 2^1023*(2-2^-52)
-MIN_EXP(::Val{ℯ},  ::Type{Float64}) = -745.1332191019412076235  # log 2^-1075
+MIN_EXP(::Val{ℯ},  ::Type{Float64}) = -708.396418532264106335  # log 2^-1075
 MAX_EXP(::Val{ℯ},  ::Type{Float32}) =  88.72283905206835f0      # log 2^127 *(2-2^-23)
-MIN_EXP(::Val{ℯ},  ::Type{Float32}) = -103.97207708f0           # log 2^-150
+MIN_EXP(::Val{ℯ},  ::Type{Float32}) = -87.3365448101577555f0#-103.97207708f0           # log 2^-150
 MAX_EXP(::Val{10}, ::Type{Float64}) =  308.25471555991675       # log10 2^1023*(2-2^-52)
-MIN_EXP(::Val{10}, ::Type{Float64}) = -323.60724533877976       # log10 2^-1075
+MIN_EXP(::Val{10}, ::Type{Float64}) = -307.65260000       # log10 2^-1075
 MAX_EXP(::Val{10}, ::Type{Float32}) =  38.531839419103626f0     # log10 2^127 *(2-2^-23)
-MIN_EXP(::Val{10}, ::Type{Float32}) = -45.15449934959718f0      # log10 2^-150
+MIN_EXP(::Val{10}, ::Type{Float32}) = -37.9297794795476f0      # log10 2^-127 *(2-2^-23)
 
 # 256/log(base, 2) (For Float64 reductions)
 LogBo256INV(::Val{2}, ::Type{Float64})    = 256.
@@ -105,14 +105,14 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
         @inline function ($func)(x::FloatType32)
             N_float = muladd(x, LogBINV($base, Float32), MAGIC_ROUND_CONST(Float32))
             N = reinterpret(UInt32, N_float)
-            N_float = N_float - MAGIC_ROUND_CONST(Float32)
-            
+            N_float = vsub(N_float, MAGIC_ROUND_CONST(Float32))
+
             r = muladd(N_float, LogBU($base, Float32), x)
             r = muladd(N_float, LogBL($base, Float32), r)
             
             small_part = reinterpret(UInt32, expb_kernel($base, r))
             twopk = N << 0x00000017
-            
+            # @show N N_float r small_part twopk
             res = reinterpret(Float32, twopk + small_part)
             res = ifelse(x >= MAX_EXP($base, Float32), Inf32, res)
             res = ifelse(x <= MIN_EXP($base, Float32), 0.0f0, res)
@@ -122,20 +122,37 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     end
 end
 
+# function findnonnan(f, x, n)
+#     nlow = 1
+#     nhigh = n
+#     @assert isnan(f(prevfloat(x,nlow)))
+#     @assert !isnan(f(prevfloat(x,nhigh)))
+#     while nlow + 1 < nhigh
+#         nmid = (nlow + nhigh) >> 1
+#         if isnan(f(prevfloat(x,nmid)))
+#             nlow = nmid
+#         else
+#             nhigh = nmid
+#         end
+#     end
+#     nlow
+# end
+
+
 # Oscard Smith
 # https://github.com/JuliaLang/julia/blob/3253fb5a60ad841965eb6bd218921d55101c0842/base/special/expm1.jl
-MAX_EXPM1(::Type{Float64}) =  709.7827128933845   # log 2^1023*(2-2^-52)
+MAX_EXPM1(::Type{Float64}) =  709.436139303104   # log 2^1023*(2-2^-52)
 MIN_EXPM1(::Type{Float64}) = -37.42994775023705   # log 2^-54
-MAX_EXPM1(::Type{Float32}) =  88.72284f0          # log 2^127 *(2-2^-23)
+MAX_EXPM1(::Type{Float32}) =  88.37627f0          # log 2^127 *(2-2^-23)
 MIN_EXPM1(::Type{Float32}) = -17.32868f0          # log 2^-25
 
 # -ln(2) in upper and lower bits
 # Upper is truncated to only have 16 bits of significand since N has at most
 # ceil(log2(-MIN_EXP(n, Float32)*Ln2INV(Float32))) = 8 bits. (19 for Float64)
 # This ensures no rounding when multiplying Ln2U*N for FMAless hardware
-Ln2INV(::Type{Float32}) = 1.442695
-Ln2U(::Type{Float32}) = -0.69314575
-Ln2L(::Type{Float32}) = -1.4286068e-6
+Ln2INV(::Type{Float32}) = 1.442695f0
+Ln2U(::Type{Float32}) = -0.69314575f0
+Ln2L(::Type{Float32}) = -1.4286068f-6
 Ln2INV(::Type{Float64}) = 1.4426950408889634
 Ln2U(::Type{Float64}) = -0.6931471805437468
 Ln2L(::Type{Float64}) = -1.619851018665656e-11
@@ -169,7 +186,7 @@ inttype(::Type{Float32}) = Int32
     hi, lo = expm1_kernel(r)
     small_part = r*hi
     small_round = fma(r, lo, fma(r, hi, -small_part))
-    twopk = reinterpret(T, ((N%UInt32) +uinttype(T)(exponent_bias(T))) << uinttype(T)(significand_bits(T)))
+    twopk = reinterpret(T, ((N%uinttype(T)) + uinttype(T)(exponent_bias(T))) << uinttype(T)(significand_bits(T)))
     
     # if !(abs(x)<=MIN_EXPM1(T))
     #     isnan(x) && return x
@@ -179,6 +196,10 @@ inttype(::Type{Float32}) = Int32
     #         return muladd(small_part, T(2), T(2)) * T(2)^(exponent_max(T)-1)
     #     end
     # end
-    return fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))
+    res = fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))
+    res = ifelse(x >= MAX_EXPM1(T), T(Inf), res)
+    res = ifelse(x <= MIN_EXPM1(T), -one(T), res)
+    res = ifelse(isnan(x), x, res)
+    return res
 end
 
