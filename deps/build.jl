@@ -17,7 +17,7 @@ function create_svmlwrap_file(mveclib)
     lib = dlopen(mveclib)
     file = ["const MVECLIB = \"$mveclib\""]
     sizes = [(:b,16),(:d,32),(:e,64)]
-    for f ∈ [:exp, :sin, :cos, :log]
+    for f ∈ [:sin, :cos, :log]
         for (l,s) ∈ sizes
             s > REGISTER_SIZE && continue
             for isdouble ∈ (true,false)

@@ -15,14 +15,15 @@ Exponentiation operator, returns `x` raised to the power `y`.
     logkxy = dmul(logkx, y)
     result = expk(logkxy)
     
-   result = vifelse(isnan(result), V(Inf), result)
-   result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
+    result = ifelse(isnan(result), V(Inf), result)
+    result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
 
-   efx = flipsign(abs(x) - 1, y)
-   result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
-   result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-   result = vifelse(isnan(x) | isnan(y), V(NaN), result)
-   result = vifelse((y == 0) | (x == 1), V(1.0), result)
+    efx = flipsign(abs(x) - 1, y)
+    # result = ifelse(y == V(Inf), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+    result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+    result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+    result = ifelse(isnan(x) | isnan(y), V(NaN), result)
+    result = ifelse((y == 0) | (x == 1), V(1.0), result)
 
     return result
 
@@ -38,14 +39,14 @@ end
     logkxy = dmul(logkx, y)
     result = expk(logkxy)
     
-   # result = vifelse(isnan(result), V(Inf), result)
-   # result = vifelse(x > 0, result, vifelse(~yisint, V(NaN), vifelse(yisodd, -result, result)))
+   # result = ifelse(isnan(result), V(Inf), result)
+   # result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
 
 #    efx = flipsign(abs(x) - 1, y)
-#    result = vifelse(isinf(y), vifelse(efx < 0, V(0.0), vifelse(efx == 0, V(1.0), V(Inf))), result)
-#    result = vifelse(isinf(x) | (x == 0), vifelse(yisodd, _sign(x), V(1.0)) * vifelse(vifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-#    result = vifelse(isnan(x) | isnan(y), V(NaN), result)
-#    result = vifelse((y == 0) | (x == 1), V(1.0), result)
+#    result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+#    result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+#    result = ifelse(isnan(x) | isnan(y), V(NaN), result)
+#    result = ifelse((y == 0) | (x == 1), V(1.0), result)
 
     return result
 
@@ -85,8 +86,8 @@ function cbrt_fast(d::V) where {V <: FloatType}
     e  = ilogbk(abs(d)) + 1
     d  = ldexp2k(d, -e)
     r  = (e + 6144) % 3
-    q  = vifelse(r == 1, V(M2P13), V(1))
-    q  = vifelse(r == 2, V(M2P23), q)
+    q  = ifelse(r == 1, V(M2P13), V(1))
+    q  = ifelse(r == 2, V(M2P23), q)
     q  = ldexp2k(q, (e + 6144) ÷ 3 - 2048)
     q  = flipsign(q, d)
     d  = abs(d)
@@ -109,8 +110,8 @@ function cbrt(d::V) where {V <: FloatType}
     e  = ilogbk(abs(d)) + 1
     d  = ldexp2k(d, -e)
     r  = (e + 6144) % 3
-    q2 = vifelse(r == 1, MD2P13(T), Double(V(1)))
-    q2 = vifelse(r == 2, MD2P23(T), q2)
+    q2 = ifelse(r == 1, MD2P13(T), Double(V(1)))
+    q2 = ifelse(r == 2, MD2P23(T), q2)
     q2 = flipsign(q2, d)
     d  = abs(d)
     x  = cbrt_kernel(d)
@@ -128,8 +129,11 @@ function cbrt(d::V) where {V <: FloatType}
     v  = dmul(v, d)
     v  = dmul(v, q2)
     z  = ldexp2k(V(v), (e + 6144) ÷ 3 - 2048)
-    z  = vifelse(isinf(d), flipsign(T(Inf), q2.hi), z)
-    z  = vifelse(d == 0, flipsign(T(0), q2.hi), z)
+    # @show z
+    # z  = ifelse(isinf(d), flipsign(T(Inf), q2.hi), z)
+    z = ifelse(isfinite(d), z, d)
+    # z  = ifelse(d == 0, flipsign(T(0), q2.hi), z)
+    z  = ifelse(d == 0, zero(V), z)
     return z
 end
 
@@ -147,6 +151,8 @@ Compute the hypotenuse `\\sqrt{x^2+y^2}` avoiding overflow and underflow.
     x = min(a,b)
     y = max(a,b)
 
-    r = vifelse(x == 0, y, y / x)
+    r = ifelse(x == 0, y, y / x)
     x * sqrt(T(1.0) + r * r)
 end
+
+

@@ -37,8 +37,8 @@ Computes `a × 2^n`.
     emax = exponent_raw_max(T)
     m, q = split_exponent(T, q)
     m += bias
-    m = vifelse(m < 0, 0, m)
-    m = vifelse(m > emax, emax, m)
+    m = ifelse(m < 0, 0, m)
+    m = ifelse(m > emax, emax, m)
     q += bias
     u = integer2float(T, m)
     u² = u * u
@@ -49,19 +49,19 @@ end
 
 @inline function ldexp2k(x::FloatType, e::I) where {I <: IntegerType}
     eshift = e >> one(I)
-    SIMDPirates.evmul(
-        SIMDPirates.evmul(x, pow2i(eltype(x), eshift)),
+    vmul(
+        vmul(x, pow2i(eltype(x), eshift)),
         pow2i(eltype(x), e - eshift)
     )
 end
 
 @inline function ldexp3k(x::T, e::Integer) where {T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
-    reinterpret(T, reinterpret(UT, x) + (((e % UT) << significand_bits(T)) % UT))
+    reinterpret(T, reinterpret(UT, x) + ((e % UT) << (significand_bits(T) % UT)))
 end
-@inline function ldexp3k(x::SVec{W,T}, e::IntegerType) where {W,T<:Union{Float32,Float64}}
+@inline function ldexp3k(x::AbstractSIMD{W,T}, e::IntegerType) where {W,T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
-    reinterpret(SVec{W,T}, reinterpret(SVec{W,UT}, x) + (((e % UT) << significand_bits(T)) % UT))
+    reinterpret(T, reinterpret(UT, x) + ((e % UT) << (significand_bits(T) % UT)))
 end
 
 # threshold values for `ilogbk`
@@ -82,12 +82,12 @@ where `significand ∈ [1, 2)`.
     T = eltype(d)
     I = fpinttype(T)
     m = d < (T(2)^-threshold_exponent(T))
-    d = vifelse(m, d * T(2)^threshold_exponent(T), d)
+    d = ifelse(m, d * T(2)^threshold_exponent(T), d)
     q = float2integer(d) & I(exponent_raw_max(T))
-    q = vifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
+    q = ifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
 end
-# @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(SVec(SIMDPirates.extract_data(d)))
-# @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(SVec(SIMDPirates.extract_data(d)))
+# @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(Vec(SIMDPirates.data(d)))
+# @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(Vec(SIMDPirates.data(d)))
 # similar to ilogbk, but argument has to be a normalized float value
 @inline function ilogb2k(d::FloatType)
     T = eltype(d)
@@ -146,20 +146,30 @@ end
 end
 
 @inline calcq(::Type{T}, xlo) where {T <: Union{Float32,Float64}} = (I = fpinttype(T); ifelse(xlo, -2 % I, zero(I)))
-@inline function calcq(::Type{V}, xlo) where {W, T, V <: SVec{W,T}}
+@inline function calcq(::Type{V}, xlo) where {W, T, V <: Vec{W,T}}
     I = fpinttype(T)
-    vifelse(xlo, vbroadcast(SVec{W,I}, -2 % I), vzero(SVec{W,I}))
+    ifelse(xlo, vbroadcast(Val{W}(), -2 % I), vzero(Vec{W,I}))
 end
-@inline function atan2k_fast(y::V, x::V) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@generated function calcq(::Type{VecUnroll{N,W,T,V}}, xlo::VecUnroll) where {N,W,T,V}
+    I = fpinttype(T)
+    t = Expr(:tuple)
+    for n ∈ 1:N+1
+        push!(t.args, :(ifelse(xlod[$n], neg2, zer)))
+    end
+    q = Expr(:block,Expr(:meta,:inline), :(neg2 = vbroadcast(Val{$W}(), $(-2 % I))), :(zer = vzero(Vec{$W,$I})), :(xlod = xlo.data), :(VecUnroll($t)))
+    q
+end
+@inline function atan2k_fast(y::V, x::V) where {V <: vIEEEFloat}
+    T = eltype(y)
     xl0 = x < 0
     I = fpinttype(T)
     q = calcq(V, xl0)
-    x = vifelse(xl0, -x, x)
+    x = ifelse(xl0, -x, x)
     ygx = y > x
     t = x
-    x = vifelse(ygx, y, x)
-    y = vifelse(ygx, -t, y)
-    q = vifelse(ygx, q + one(I), q)
+    x = ifelse(ygx, y, x)
+    y = ifelse(ygx, -t, y)
+    q = ifelse(ygx, q + one(I), q)
 
     s = y / x
     t = s * s
@@ -168,20 +178,21 @@ end
     q * T(PI_2) + t
 end
 
-@inline function atan2k(y::Double{V}, x::Double{V}) where {T,V<:Union{T,SVec{<:Any,T}}}
+@inline function atan2k(y::Double{V}, x::Double{V}) where {V <: vIEEEFloat}
+    T = eltype(y)
     xl0 = x < 0
     I = fpinttype(T)
-    if V <: SVec
-        q = vifelse(xl0, SVec{length(x.hi),I}(-2), zero(I))
+    if V <: Vec
+        q = ifelse(xl0, Vec{length(x.hi),I}(-2), zero(I))
     else
-        q = vifelse(xl0, I(-2), zero(I))
+        q = ifelse(xl0, I(-2), zero(I))
     end
-    x = vifelse(xl0, -x, x)
+    x = ifelse(xl0, -x, x)
     ygx = y > x
     t = x
-    x = vifelse(ygx, y, x)
-    y = vifelse(ygx, -t, y)
-    q = vifelse(ygx, q+one(I), q)
+    x = ifelse(ygx, y, x)
+    y = ifelse(ygx, -t, y)
+    q = ifelse(ygx, q+one(I), q)
 
     s = ddiv(y, x)
     t = dsqu(s)
@@ -191,8 +202,8 @@ end
 
     t = dmul(t, u)
     t = dmul(s, dadd(T(1.0), t))
-    T <: Float64 && (t = vifelse(abs(s.hi) < 1e-200, s, t))
-    t = dadd(dmul(convert(V,q), MDPI2(T)), t)
+    T <: Float64 && (t = ifelse(abs(s.hi) < 1e-200, s, t))
+    t = dadd(dmul(convert(T,q), MDPI2(T)), t)
     return t
 end
 
@@ -224,7 +235,8 @@ end
     return @horner x c1 c2 c3 c4 c5
 end
 
-@inline function expk(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function expk(d::Double{V}) where {V <: vIEEEFloat}
+    T = eltype(d)
     q = round(V(d) * V(MLN2E))
     qi = unsafe_trunc(fpinttype(T), q)
 
@@ -239,7 +251,7 @@ end
     t = dadd(T(1.0), t)
     u = ldexpk(V(t), qi)
 
-    u = vifelse(d.hi < under_expk(T), V(0.0), u)
+    u = ifelse(d.hi < under_expk(T), V(0.0), u)
     return u
 end
 
@@ -271,7 +283,8 @@ end
     return dadd(dmul(x, u), c1)
 end
 
-@inline function expk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function expk2(d::Double{V}) where {V <: vIEEEFloat}
+    T = eltype(d)
     q = round(V(d) * T(MLN2E))
     qi = unsafe_trunc(fpinttype(T), q)
 
@@ -285,7 +298,7 @@ end
 
     t = Double(ldexp2k(t.hi, qi), ldexp2k(t.lo, qi))
 
-    t = vifelse(d.hi < under_expk(T), Double(V(0.0)), t)
+    t = ifelse(d.hi < under_expk(T), Double(V(0.0)), t)
     return t
 end
 
@@ -311,7 +324,8 @@ end
     return @horner x c1 c2 c3 c4
 end
 
-@inline function logk2(d::Double{V}) where {T<:Union{Float32,Float64},V<:Union{T,SVec{<:Any,T}}}
+@inline function logk2(d::Double{V}) where {V <: vIEEEFloat}
+    T = eltype(d)
     e  = ilogbk(d.hi * T(1.0/0.75))
     m  = scale(d, pow2i(T, -e))
 
@@ -320,7 +334,7 @@ end
 
     t  = logk2_kernel(x2.hi)
 
-    s = dmul(MDLN2(T), convert(V,e))
+    s = dmul(MDLN2(T), convert(T,e))
     s = dadd(s, scale(x, T(2.0)))
     s = dadd(s, dmul(dmul(x2, x), t))
     return s
@@ -352,16 +366,18 @@ end
     dadd(dmul(x, @horner x.hi c2 c3 c4), c1)
 end
 
+logkmul(::Type{Float64}) = 1.8446744073709551616e19
+logkmul(::Type{Float32}) = 1.8446744073709551616f19
 @inline function logk(d::V) where (V <: FloatType)
     T = eltype(d)
     I = fpinttype(T)
     o = d < floatmin(T)
-    d = vifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
+    d = ifelse(o, d * logkmul(T), d)
 
     e  = ilogb2k(d * T(1.0/0.75))
     m  = ldexp3k(d, - e)
 
-    e = vifelse(o, e - I(64), e)
+    e = ifelse(o, e - I(64), e)
 
     x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
 
@@ -375,3 +391,4 @@ end
     return s
 
 end
+
