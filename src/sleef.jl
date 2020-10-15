@@ -129,6 +129,7 @@ if VectorizationBase.AVX512F
           ret <8 x double> %52
     """, :(_Vec{8,Float64}), :(Tuple{_Vec{8,Float64}}), "<8 x double>", ["<8 x double>"], [:(data(v))], true))
     end
+    @inline Base.log1p(v::SVec{8,Float64}) = SVec(log1p(extract_data(v)))
 end
 # @inline function log1p(v::Vec{8,Float64})
 #     llvmcall(("""

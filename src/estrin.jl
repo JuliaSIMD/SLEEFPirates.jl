@@ -47,7 +47,11 @@ end
 
 macro estrin(x, p...)
     t = Expr(:tuple); foreach(pᵢ -> push!(t.args, pᵢ), p)
-    esc(Expr(:call, :estrin, x, t))
+    if __module__ == SLEEFPirates
+        esc(Expr(:call, :estrin, x, t))
+    else
+        esc(Expr(:call, Expr(:(.), :SLEEFPirates, QuoteNode(:estrin)), x, t))
+    end
 end
 
 macro horner(x, p...)
