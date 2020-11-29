@@ -90,7 +90,7 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             # @show r (N & $FF)
             js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & $FF,))
             # @show N js
-            k = N >>> 8
+            k = N >>> 0x0000000000000008
             
             small_part = reinterpret(UInt64, muladd(js, expm1b_kernel($base, r), js))
             twopk = $twopkpreshift << 0x0000000000000034

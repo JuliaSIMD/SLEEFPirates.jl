@@ -94,15 +94,15 @@ function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
     x = Vector{T}(undef, N * W)
     for n ∈ 1:N
         v = u.data[n]
-        for w ∈ 1:W
-            x[(i += 1)] = VectorizationBase.getelement(v, w)
+        for w ∈ 0:W-1
+            x[(i += 1)] = VectorizationBase.extractelement(v, w)
         end
     end
     x
 end
-tovector(v::VectorizationBase.AbstractSIMDVector{W}) where {W} = [VectorizationBase.getelement(v,w) for w ∈ 1:W]
+tovector(v::VectorizationBase.AbstractSIMDVector{W}) where {W} = [VectorizationBase.extractelement(v,w) for w ∈ 0:W-1]
 
-function test_vector(xfun, fun, ::Val{W}, xf::T, xl::T, tol) where {W,T<:Number}
+function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::T, xl::T, tol) where {W,T<:Number}
     xf = nextfloat(xf); xl = prevfloat(xl);
     δ = xl - xf
     loginputs = (δ > 1e3) & (xf > 0)
@@ -137,7 +137,7 @@ function test_vector(xfun, fun, ::Val{W}, xf::T, xl::T, tol) where {W,T<:Number}
     # @test tu1 ≈ tu2
 end
 vbig(x) = big.(x)
-function test_vector(xfun, fun, ::Val{W}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol) where {W,N,T}
+function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol) where {W,N,T}
     xf = nextfloat.(xf); xl = prevfloat.(xl);
     δ = xl .- xf
     denom = 5W + 1
