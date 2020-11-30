@@ -9,6 +9,8 @@
 @inline cos(v::NTuple{16,Core.VecElement{Float32}}) = ccall((:_ZGVeN16v_cosf,MVECLIB), NTuple{16,Core.VecElement{Float32}}, (NTuple{16,Core.VecElement{Float32}},), v)
 @inline Base.cos(v::Vec{16,Float32}) = Vec(cos(data(v)))
 
+# @inline log(v::NTuple{8,Core.VecElement{Float64}}) = ccall((:_ZGVeN8v_log,MVECLIB), NTuple{8,Core.VecElement{Float64}}, (NTuple{8,Core.VecElement{Float64}},), v)
+# @inline Base.log(v::Vec{8,Float64}) = Vec(log(data(v)))
 @inline log(v::NTuple{16,Core.VecElement{Float32}}) = ccall((:_ZGVeN16v_logf,MVECLIB), NTuple{16,Core.VecElement{Float32}}, (NTuple{16,Core.VecElement{Float32}},), v)
 @inline Base.log(v::Vec{16,Float32}) = Vec(log(data(v)))
 

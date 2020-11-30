@@ -32,9 +32,9 @@ function create_svmlwrap_file(mveclib)
                 if sym != C_NULL
                     typ = "Float$(isdouble ? 64 : 32)"
                     vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
-                    svtyp = "SVec{$ts,$typ}"
+                    svtyp = "Vec{$ts,$typ}"
                     def1 = "@inline $f(v::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,), v)"
-                    def2 = "@inline Base.$f(v::$svtyp) = SVec($f(extract_data(v)))"
+                    def2 = "@inline Base.$f(v::$svtyp) = Vec($f(data(v)))"
                     push!(file, def1)
                     push!(file, def2)
                 end
@@ -55,9 +55,9 @@ function create_svmlwrap_file(mveclib)
                     if sym != C_NULL
                         typ = "Float$(isdouble ? 64 : 32)"
                         vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
-                        svtyp = "SVec{$ts,$typ}"
+                        svtyp = "Vec{$ts,$typ}"
                         def1 = "@inline $f(v1::$vtyp, v2::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,$vtyp), v1, v2)"
-                        def2 = "@inline Base.:($sf)(v1::$svtyp, v2::$svtyp) = SVec($f(extract_data(v1),extract_data(v2)))"
+                        def2 = "@inline Base.:($sf)(v1::$svtyp, v2::$svtyp) = Vec($f(data(v1),data(v2)))"
                         push!(file, def1)
                         push!(file, def2)
                     end
