@@ -216,7 +216,7 @@ function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
             test_vector(xfun, fun, Val(4), first(xx), last(xx), tol)
         end
         if W ≥ 8
-            test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
+            # test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
             test_vector(xfun, fun, Val(8), first(xx), last(xx), tol)
         end
         if W ≥ 16
