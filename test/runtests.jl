@@ -1,4 +1,4 @@
-using SLEEFPirates, VectorizationBase
+using SLEEFPirates, VectorizationBase, Aqua
 using Test
 
 using Base.Math: significand_bits
@@ -227,7 +227,8 @@ end
 
 function runtests()
     @testset "SLEEFPirates" begin
-        @test isempty(detect_unbound_args(SLEEFPirates))
+        # @test isempty(detect_unbound_args(SLEEFPirates))
+        Aqua.test_all(SLEEFPirates)
         # include("exceptional.jl")
         include("accuracy.jl")
     end

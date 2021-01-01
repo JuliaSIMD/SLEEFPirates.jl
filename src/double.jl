@@ -16,7 +16,8 @@ end
 @inline promote_vtype(::Type{Double{T}}, ::Type{Mask{W,U}}) where {W, U, T <: Number} = Double{Vec{W,T}}
 @inline Base.convert(::Type{Double{V}}, v::Vec) where {W,T,V <: AbstractSIMD{W,T}} = Double(convert(V, v), vzero(V))
 @inline Base.convert(::Type{Double{V}}, v::V) where {V <: AbstractSIMD} = Double(v, vzero(V))
-@inline Base.convert(::Type{Double{V}}, m::Mask) where {V} = m
+# @inline Base.convert(::Type{Double{V}}, m::Mask) where {V} = m
+# @inline Base.convert(::Type{Double{Mask{W,U}}}, m::Mask{W,U}) where {W,U} = m
 @inline Base.convert(::Type{Double{V}}, d::Double{T}) where {W,T,V<:AbstractSIMD{W,T}} = Double(vbroadcast(Val{W}(), d.hi), vbroadcast(Val{W}(), d.lo))
 @inline Base.eltype(d::Double) = eltype(d.hi)
 
@@ -74,17 +75,17 @@ end
 
 @inline function splitprec(x::vIEEEFloat)
     hx = trunclo(x)
-    hx, x - hx
+    hx, vsub(x, hx)
 end
 
 @inline function dnormalize(x::Double{T}) where {T}
-    r = x.hi + x.lo
-    Double(r, (x.hi - r) + x.lo)
+    r = vadd(x.hi, x.lo)
+    Double(r, vadd(vsub(x.hi, r), x.lo))
 end
 
 @inline flipsign(x::Double{<:vIEEEFloat}, y::vIEEEFloat) = Double(flipsign(x.hi, y), flipsign(x.lo, y))
 
-@inline scale(x::Double{<:vIEEEFloat}, s::vIEEEFloat) = Double(s * x.hi, s * x.lo)
+@inline scale(x::Double{<:vIEEEFloat}, s::vIEEEFloat) = Double(vmul(s, x.hi), vmul(s, x.lo))
 
 
 @inline (-)(x::Double{T}) where {T<:vIEEEFloat} = Double(-x.hi, -x.lo)
@@ -103,91 +104,91 @@ end
 
 # quick-two-sum x+y
 @inline function dadd(x::vIEEEFloat, y::vIEEEFloat) #WARNING |x| >= |y|
-    s = x + y
-    Double(s, vsub(x, s) + y)
+    s = vadd(x, y)
+    Double(s, vadd(vsub(x, s), y))
 end
 
 @inline function dadd(x::vIEEEFloat, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
-    s = x + y.hi
-    Double(s, vsub(x, s) + y.hi + y.lo)
+    s = vadd(x, y.hi)
+    Double(s, vadd(vadd(vsub(x, s), y.hi), y.lo))
 end
 
 @inline function dadd(x::Double{<:vIEEEFloat}, y::vIEEEFloat) #WARNING |x| >= |y|
-    s = x.hi + y
-    Double(s, vsub(x.hi, s) + y + x.lo)
+    s = vadd(x.hi, y)
+    Double(s, vadd(vadd(vsub(x.hi, s), y), x.lo))
 end
 
 @inline function dadd(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
-    s = x.hi + y.hi
-    Double(s, vsub(x.hi, s) + y.hi + y.lo + x.lo)
+    s = vadd(x.hi, y.hi)
+    Double(s, vadd(vadd(vadd(vsub(x.hi, s), y.hi), y.lo), x.lo))
 end
 
 @inline function dsub(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
-    s = x.hi - y.hi
-    Double(s, vsub(x.hi, s) - y.hi - y.lo + x.lo)
+    s = vsub(x.hi, y.hi)
+    Double(s, vadd(vsub(vsub(vsub(x.hi, s), y.hi), y.lo), x.lo))
 end
 
 @inline function dsub(x::Double{<:vIEEEFloat}, y::vIEEEFloat) #WARNING |x| >= |y|
-    s = x.hi - y
-    Double(s, vsub(x.hi, s) - y + x.lo)
+    s = vsub(x.hi, y)
+    Double(s, vadd(vsub(vsub(x.hi, s), y), x.lo))
 end
 
 @inline function dsub(x::vIEEEFloat, y::Double{<:vIEEEFloat}) #WARNING |x| >= |y|
-    s = x - y.hi
-    Double(s, vsub(x, s) - y.hi - y.lo)
+    s = vsub(x, y.hi)
+    Double(s, vsub(vsub(vsub(x, s), y.hi, y.lo)))
 end
 
 @inline function dsub(x::vIEEEFloat, y::vIEEEFloat) #WARNING |x| >= |y|
-    s = x - y
-    Double(s, vsub(x, s) - y)
+    s = vsub(x, y)
+    Double(s, vsub(vsub(x, s), y))
 end
 
 
 # two-sum x+y  NO BRANCH
 @inline function dadd2(x::vIEEEFloat, y::vIEEEFloat)
-    s = x + y
+    s = vadd(x, y)
     v = vsub(s, x)
-    Double(s, vsub(x, vsub(s, v)) + vsub(y, v))
+    Double(s, vadd(vsub(x, vsub(s, v)), vsub(y, v)))
 end
 
 @inline function dadd2(x::vIEEEFloat, y::Double{<:vIEEEFloat})
-    s = x + y.hi
-    v = s - x
+    s = vadd(x, y.hi)
+    v = vsub(s, x)
     Double(s, vsub(x, vsub(s, v)) + vsub(y.hi, v) + y.lo)
 end
 
 @inline dadd2(x::Double{<:vIEEEFloat}, y::vIEEEFloat) = dadd2(y, x)
 
 @inline function dadd2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-    s = x.hi + y.hi
+    s = vadd(x.hi, y.hi)
     v = vsub(s, x.hi)
     smv = vsub(s, v)
     yhimv = vsub(y.hi, v)
-    Double(s, vsub(x.hi, smv) + (yhimv) + x.lo + y.lo)
+    Double(s, vadd(vadd(vadd(vsub(x.hi, smv), yhimv), x.lo), y.lo))
 end
 
 @inline function dsub2(x::vIEEEFloat, y::vIEEEFloat)
-    s = x - y
-    v = s - x
-    Double(s, vsub(x, vsub(s, v)) + vsub(-y, v))
+    s = vsub(x, y)
+    v = vsub(s, x)
+    Double(s, vadd(vsub(x, vsub(s, v)), vsub(-y, v)))
 end
 
 @inline function dsub2(x::vIEEEFloat, y::Double{<:vIEEEFloat})
-    s = x - y.hi
-    v = s - x
-    Double(s, vsub(x, vsub(s, v)) + vsub(-y.hi, v) - y.lo)
+    s = vsub(x, y.hi)
+    v = vsub(s, x)
+    Double(s, vsub(vadd(vsub(x, vsub(s, v)), vsub(-y.hi, v)), y.lo))
 end
 
 @inline function dsub2(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
-    s = x.hi - y
-    v = s - x.hi
-    Double(s, vsub(x.hi, vsub(s, v)) + vsub(-y, v) + x.lo)
+    s = vsub(x.hi, y)
+    v = vsub(s, x.hi)
+    Double(s, vadd(vadd(vsub(x.hi, vsub(s, v)), vsub(-y, v)), x.lo))
 end
 
 @inline function dsub2(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-    s = x.hi - y.hi
-    v = s - x.hi
-    Double(s, vsub(x.hi, vsub(s, v)) + vsub(-y.hi, v) + x.lo - y.lo)
+    s = vsub(x.hi, y.hi)
+    v = vsub(s, x.hi)
+    Double(s, vsub(vadd(vadd(vsub(x.hi, vsub(s, v)), vsub(-y.hi, v)), x.lo), y.lo))
 end
 
 @inline function ifelse(b::Mask{N}, x::Double{T1}, y::Double{T2}) where {N,T<:Union{Float32,Float64},T1<:Union{T,Vec{N,T}},T2<:Union{T,Vec{N,T}}}
@@ -199,62 +200,64 @@ if FMA_FAST
 
     # two-prod-fma
     @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
-        z = x * y
+        z = vmul(x, y)
         Double(z, fma(x, y, -z))
     end
 
     @inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
-        z = x.hi * y
-        Double(z, fma(x.hi, y, -z) + x.lo * y)
+        z = vmul(x.hi, y)
+        # Double(z, fma(x.hi, y, -z) + x.lo * y)
+        Double(z, vadd(fma(x.hi, y, -z), vmul(x.lo, y)))
     end
 
     @inline dmul(x::vIEEEFloat, y::Double{<:vIEEEFloat}) = dmul(y, x)
 
     @inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-        z = x.hi * y.hi
-        Double(z, fma(x.hi, y.hi, -z) + x.hi * y.lo + x.lo * y.hi)
+        z = vmul(x.hi, y.hi)
+        # Double(z, fma(x.hi, y.hi, -z) + x.hi * y.lo + x.lo * y.hi)
+        Double(z, vadd(vadd(fma(x.hi, y.hi, -z), vmul(x.hi, y.lo)), vmul(x.lo, y.hi)))
     end
 
     # x^2
     @inline function dsqu(x::T) where {T<:vIEEEFloat}
-        z = x * x
+        z = vmul(x, x)
         Double(z, fma(x, x, -z))
     end
 
     @inline function dsqu(x::Double{T}) where {T<:vIEEEFloat}
-        z = x.hi * x.hi
-        Double(z, fma(x.hi, x.hi, -z) + x.hi * (x.lo + x.lo))
+        z = vmul(x.hi, x.hi)
+        Double(z, fma(x.hi, x.hi, -z) + vmul(x.hi, vadd(x.lo, x.lo)))
     end
 
     # sqrt(x)
     @inline function dsqrt(x::Double{T}) where {T<:vIEEEFloat}
         zhi = _sqrt(x.hi)
-        Double(zhi, (x.lo + fma(-zhi, zhi, x.hi)) / (zhi + zhi))
+        Double(zhi, vadd(x.lo, fma(-zhi, zhi, x.hi)) / vadd(zhi, zhi))
     end
 
     # x/y
     @inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-        invy = 1 / y.hi
-        zhi = x.hi * invy
+        invy = inv(y.hi)
+        zhi = vmul(x.hi, invy)
         Double(zhi, vmul((fma(-zhi, y.hi, x.hi) + fma(-zhi, y.lo, x.lo)), invy))
     end
 
     @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat)
-        ry = 1 / y
-        r = x * ry
+        ry = inv(y)
+        r = vmul(x, ry)
         Double(r, vmul(vfnmadd(r, y, x), ry))
         # Double(r, vmul(fma(-r, y, x), ry))
     end
 
     # 1/x
     @inline function drec(x::vIEEEFloat)
-        zhi = 1 / x
-        Double(zhi, fma(-zhi, x, one(eltype(x))) * zhi)
+        zhi = inv(x)
+        Double(zhi, vmul(fma(-zhi, x, one(eltype(x))), zhi))
     end
 
     @inline function drec(x::Double{<:vIEEEFloat})
-        zhi = 1 / x.hi
-        Double(zhi, (fma(-zhi, x.hi, one(eltype(x))) + -zhi * x.lo) * zhi)
+        zhi = inv(x.hi)
+        Double(zhi, vmul(vsub(fma(-zhi, x.hi, one(eltype(x))), vmul(zhi, x.lo)), zhi))
     end
 
 else
@@ -263,7 +266,7 @@ else
     @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
         hx, lx = splitprec(x)
         hy, ly = splitprec(y)
-        z = x * y
+        z = vmul(x, y)
         Double(z, ((hx * hy - z) + lx * hy + hx * ly) + lx * ly)
     end
 

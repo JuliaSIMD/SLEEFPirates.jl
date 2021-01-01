@@ -5,7 +5,9 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, vsub, vmul, VecUnroll
+using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, vsub, vmul, VecUnroll, NativeTypes, FloatingTypes,
+    vadd, vmul, vsub
+
 import IfElse: ifelse
 
 export Vec, logit, invlogit, nlogit, ninvlogit, log1m, tanh_fast#, loggamma
@@ -165,7 +167,8 @@ for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
 end
 
 for func in (:atan, :hypot, :pow)
-    func2 = func == :pow ? :^ : func
+    func2 = func === :pow ? :^ : func
+    ptyp = func === :pow ? :FloatingTypes : :NativeTypes
     @eval begin
         $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
         $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
@@ -173,8 +176,8 @@ for func in (:atan, :hypot, :pow)
         # @inline Base.$func2(x::Vec{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
         @inline Base.$func2(x::AbstractSIMD{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, convert(Vec{W,T}, y))
         @inline Base.$func2(x::T, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(convert(Vec{W,T}, x), y)
-        @inline Base.$func2(x::AbstractSIMD{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2<:Number} = $func(x, convert(Vec{W,T1}, y))
-        @inline Base.$func2(x::T2, y::AbstractSIMD{W,T1}) where {W,T1<:Union{Float32,Float64},T2<:Number} = $func(convert(Vec{W,T1}, x), y)
+        @inline Base.$func2(x::AbstractSIMD{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2<:$ptyp} = $func(x, convert(Vec{W,T1}, y))
+        @inline Base.$func2(x::T2, y::AbstractSIMD{W,T1}) where {W,T1<:Union{Float32,Float64},T2<:NativeTypes} = $func(convert(Vec{W,T1}, x), y)
         @inline Base.$func2(x::AbstractSIMD{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
         @inline $func(v1::AbstractSIMD{W,I}, v2::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v1), float(v2))
     end

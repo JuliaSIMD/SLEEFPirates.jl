@@ -18,7 +18,7 @@ Exponentiation operator, returns `x` raised to the power `y`.
     result = ifelse(isnan(result), V(Inf), result)
     result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
 
-    efx = flipsign(abs(x) - 1, y)
+    efx = flipsign(abs(x) - one(x), y)
     # result = ifelse(y == V(Inf), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
     result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
     result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
@@ -28,29 +28,30 @@ Exponentiation operator, returns `x` raised to the power `y`.
     return result
 
 end
-@inline function pow_fast(x::V, y::V) where {V <: FloatType}
-    T = eltype(x)
-    yi = unsafe_trunc(fpinttype(T), y)
-    yisint = yi == y
-    yisodd = isodd(yi) & yisint
+@inline pow_fast(x, y) = exp2(y*log2(x))
+# @inline function pow_fast(x::V, y::V) where {V <: FloatType}
+#     T = eltype(x)
+#     yi = unsafe_trunc(fpinttype(T), y)
+#     yisint = yi == y
+#     yisodd = isodd(yi) & yisint
 
-    absx = abs(x)
-    logkx = logk(absx)
-    logkxy = dmul(logkx, y)
-    result = expk(logkxy)
+#     absx = abs(x)
+#     logkx = logk(absx)
+#     logkxy = dmul(logkx, y)
+#     result = expk(logkxy)
     
-   # result = ifelse(isnan(result), V(Inf), result)
-   # result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
+#    # result = ifelse(isnan(result), V(Inf), result)
+#    # result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
 
-#    efx = flipsign(abs(x) - 1, y)
-#    result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
-#    result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-#    result = ifelse(isnan(x) | isnan(y), V(NaN), result)
-#    result = ifelse((y == 0) | (x == 1), V(1.0), result)
+# #    efx = flipsign(abs(x) - 1, y)
+# #    result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+# #    result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+# #    result = ifelse(isnan(x) | isnan(y), V(NaN), result)
+# #    result = ifelse((y == 0) | (x == 1), V(1.0), result)
 
-    return result
+#     return result
 
-end
+# end
 
 
 
