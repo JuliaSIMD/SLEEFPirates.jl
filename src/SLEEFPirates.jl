@@ -127,8 +127,6 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 # include("sleef.jl")
 # include("xsimd.jl")
 
-@inline Base.exp(x::Vec) = exp(x)
-
 # fallback definitions
 
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
@@ -184,18 +182,13 @@ for func in (:atan, :hypot, :pow)
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
-@inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(1,x)))
-@inline logit(x::AbstractSIMD{W,T}) where {W,T} = log(x / (vbroadcast(Val{W}(),one(T)) - x))
-@inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(Base.FastMath.sub_fast(x))))
-@inline invlogit(x::AbstractSIMD{W,T}) where {W,T} = (o = vbroadcast(Val{W}(),one(T)); (o / (o + exp(-x))))
-@inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(1,x), x))
-@inline nlogit(x::AbstractSIMD{W,T}) where {W,T} = log((vbroadcast(Val{W}(),one(T)) - x) / x)
-@inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(1, exp(x)))
-@inline ninvlogit(x::AbstractSIMD{W,T}) where {W,T} = inv(vbroadcast(Val{W}(), one(T)) + exp(x))
-@inline log1m(x) = Base.log1p(Base.FastMath.sub_fast(x))
-@inline log1m(v::AbstractSIMD{W,T}) where {W,T} = log1p(-v)
+@inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
+@inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
+@inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(one(x),x), x))
+@inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(x)))
+@inline log1m(x) = log1p(Base.FastMath.sub_fast(x))
 @inline function tanh_fast(x)
-    exp2xm1 = expm1(x + x)
+    exp2xm1 = expm1(Base.FastMath.add_fast(x, x))
     exp2xm1 / (exp2xm1 + typeof(x)(2))
 end
 

@@ -10,10 +10,6 @@ end
 @inline function Double(x::Vec, y::Vec)
     Double(Vec(data(x)), Vec(data(y)))
 end
-@inline promote_vtype(::Type{Mask{W,U}}, ::Type{Double{V}}) where {W, U, T, V <: AbstractSIMD{W,T}} = Double{V}
-@inline promote_vtype(::Type{Double{V}}, ::Type{Mask{W,U}}) where {W, U, T, V <: AbstractSIMD{W,T}} = Double{V}
-@inline promote_vtype(::Type{Mask{W,U}}, ::Type{Double{T}}) where {W, U, T <: Number} = Double{Vec{W,T}}
-@inline promote_vtype(::Type{Double{T}}, ::Type{Mask{W,U}}) where {W, U, T <: Number} = Double{Vec{W,T}}
 @inline Base.convert(::Type{Double{V}}, v::Vec) where {W,T,V <: AbstractSIMD{W,T}} = Double(convert(V, v), vzero(V))
 @inline Base.convert(::Type{Double{V}}, v::V) where {V <: AbstractSIMD} = Double(v, vzero(V))
 # @inline Base.convert(::Type{Double{V}}, m::Mask) where {V} = m
