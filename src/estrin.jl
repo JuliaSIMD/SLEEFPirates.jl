@@ -44,15 +44,17 @@
     end
     ex
 end
+# Given a `VecUnroll` argument, we'll instruction level parallelism that way and can thus forgo `estrin` 
+@inline estrin(x::VecUnroll, p::NTuple{N}) where {N} = evalpoly(x, p)
 
-macro estrin(x, p...)
-    t = Expr(:tuple); foreach(pᵢ -> push!(t.args, pᵢ), p)
-    if __module__ == SLEEFPirates
-        esc(Expr(:call, :estrin, x, t))
-    else
-        esc(Expr(:call, Expr(:(.), :SLEEFPirates, QuoteNode(:estrin)), x, t))
-    end
-end
+# macro estrin(x, p...)
+#     t = Expr(:tuple); foreach(pᵢ -> push!(t.args, pᵢ), p)
+#     if __module__ == SLEEFPirates
+#         esc(Expr(:call, :estrin, x, t))
+#     else
+#         esc(Expr(:call, Expr(:(.), :SLEEFPirates, QuoteNode(:estrin)), x, t))
+#     end
+# end
 
 macro horner(x, p...)
     N = length(p)
