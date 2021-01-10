@@ -1,3 +1,4 @@
+
 # magic rounding constant: 1.5*2^52 Adding, then subtracting it from a float rounds it to an Int.
 MAGIC_ROUND_CONST(::Type{Float64}) = 6.755399441055744e15
 MAGIC_ROUND_CONST(::Type{Float32}) = 1.2582912f7
@@ -75,7 +76,6 @@ const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     Ndef1 = :(reinterpret(UInt64, N_float))
     Ndef1 = VectorizationBase.AVX512DQ ? Ndef1 : :($Ndef1 % UInt32)
-    # twopkpreshift = :(VectorizationBase.vadd(k, 0x0000000000000035))
     twopkpreshift = VectorizationBase.AVX512DQ ? :k : :(k % UInt64)
     FF = VectorizationBase.AVX512DQ ? 0x00000000000000ff : 0x000000ff
     @eval begin
@@ -85,14 +85,14 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             N = $Ndef1
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
             # @show N_float
-            r = muladd(N_float, LogBo256U($base, Float64), x)
-            r = muladd(N_float, LogBo256L($base, Float64), r)
+            r = vfmadd(N_float, LogBo256U($base, Float64), x)
+            r = vfmadd(N_float, LogBo256L($base, Float64), r)
             # @show r (N & $FF)
             js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & $FF,))
             # @show N js
             k = N >>> 0x0000000000000008
             
-            small_part = reinterpret(UInt64, muladd(js, expm1b_kernel($base, r), js))
+            small_part = reinterpret(UInt64, vfmadd(js, expm1b_kernel($base, r), js))
             twopk = $twopkpreshift << 0x0000000000000034
             # @show k small_part twopk twopk + small_part r
             res = reinterpret(Float64, twopk + small_part)
@@ -103,12 +103,12 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
         end
         
         @inline function ($func)(x::FloatType32)
-            N_float = muladd(x, LogBINV($base, Float32), MAGIC_ROUND_CONST(Float32))
+            N_float = vfmadd(x, LogBINV($base, Float32), MAGIC_ROUND_CONST(Float32))
             N = reinterpret(UInt32, N_float)
-            N_float = vsub(N_float, MAGIC_ROUND_CONST(Float32))
+            N_float = (N_float - MAGIC_ROUND_CONST(Float32))
 
-            r = muladd(N_float, LogBU($base, Float32), x)
-            r = muladd(N_float, LogBL($base, Float32), r)
+            r = vfmadd(N_float, LogBU($base, Float32), x)
+            r = vfmadd(N_float, LogBL($base, Float32), r)
             
             small_part = reinterpret(UInt32, expb_kernel($base, r))
             twopk = N << 0x00000017
@@ -181,8 +181,8 @@ inttype(::Type{Float32}) = Int32
     T = eltype(x)
     N_float = round(x*Ln2INV(T))
     N = unsafe_trunc(inttype(T), N_float)
-    r = muladd(N_float, Ln2U(T), x)
-    r = muladd(N_float, Ln2L(T), r)
+    r = vfmadd(N_float, Ln2U(T), x)
+    r = vfmadd(N_float, Ln2L(T), r)
     hi, lo = expm1_kernel(r)
     small_part = r*hi
     small_round = fma(r, lo, fma(r, hi, -small_part))
@@ -193,7 +193,7 @@ inttype(::Type{Float32}) = Int32
     #     x > MAX_EXPM1(T) && return T(Inf)
     #     x < MIN_EXPM1(T) && return T(-1)
     #     if N == exponent_max(T)
-    #         return muladd(small_part, T(2), T(2)) * T(2)^(exponent_max(T)-1)
+    #         return vfmadd(small_part, T(2), T(2)) * T(2)^(exponent_max(T)-1)
     #     end
     # end
     res = fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))

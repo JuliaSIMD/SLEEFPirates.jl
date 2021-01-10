@@ -49,8 +49,8 @@ end
 
 @inline function ldexp2k(x::FloatType, e::I) where {I <: IntegerType}
     eshift = e >> one(I)
-    vmul(
-        vmul(x, pow2i(eltype(x), eshift)),
+    (
+        (x * pow2i(eltype(x), eshift)) *
         pow2i(eltype(x), e - eshift)
     )
 end

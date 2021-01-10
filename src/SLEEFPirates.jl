@@ -5,8 +5,8 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, vsub, vmul, VecUnroll, NativeTypes, FloatingTypes,
-    vadd, vmul, vsub
+using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, VecUnroll, NativeTypes, FloatingTypes,
+    vfmadd, vfnmadd, vfmsub, vfnmsub
 
 import IfElse: ifelse
 
