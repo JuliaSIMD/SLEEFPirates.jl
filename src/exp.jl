@@ -210,6 +210,7 @@ inttype(::Type{Float32}) = Int32
 end
 @inline function expm1(x::FloatType)
     res = expm1_fast(x)
+    T = eltype(x)
     res = ifelse(x >= MAX_EXPM1(T), T(Inf), res)
     res = ifelse(x <= MIN_EXPM1(T), -one(T), res)
     res = ifelse(isnan(x), x, res)
