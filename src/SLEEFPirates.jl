@@ -193,10 +193,13 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
 
 @inline function tanh_fast(x)
     exp2xm1 = expm1(Base.FastMath.add_fast(x, x))
-    ponemask = x > max_tanh(eltype(x))
-    nonemask = x < -max_tanh(eltype(x))
-    t = exp2xm1 * Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
-    ifelse(ponemask, one(x), ifelse(nonemask, -one(x), t))
+    # Division is faster than approximate inversion in
+    # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
+    t = exp2xm1 / Base.FastMath.add_fast(exp2xm1, typeof(x)(2))
+    #ponemask = x > max_tanh(eltype(x))
+    #nonemask = x < -max_tanh(eltype(x))
+    #ifelse(ponemask, one(x), ifelse(nonemask, -one(x), t))
+    ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
 
 if Sys.islinux() && Sys.ARCH === :x86_64
