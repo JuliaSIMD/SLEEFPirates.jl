@@ -123,9 +123,6 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 #         @warn "Building SLEEFPirates is likely to increase performance of some functions."
 #     end
 # end
-# include("lgamma.jl")
-# include("sleef.jl")
-# include("xsimd.jl")
 
 # fallback definitions
 
@@ -196,9 +193,6 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
     # Division is faster than approximate inversion in
     # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
     t = exp2xm1 / Base.FastMath.add_fast(exp2xm1, typeof(x)(2))
-    #ponemask = x > max_tanh(eltype(x))
-    #nonemask = x < -max_tanh(eltype(x))
-    #ifelse(ponemask, one(x), ifelse(nonemask, -one(x), t))
     ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
 
