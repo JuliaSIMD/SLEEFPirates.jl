@@ -187,9 +187,16 @@ ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(one(x),x), x))
 @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(x)))
 @inline log1m(x) = log1p(Base.FastMath.sub_fast(x))
+
+max_tanh(::Type{Float64}) = 19.06154746539849599509609553228539867418786340504817671278462587964799037885145
+max_tanh(::Type{Float32}) = 9.010913339828708369989037671244720498805572920317272822795576296065428827978905f0
+
 @inline function tanh_fast(x)
     exp2xm1 = expm1(Base.FastMath.add_fast(x, x))
-    exp2xm1 / (exp2xm1 + typeof(x)(2))
+    ponemask = x > max_tanh(eltype(x))
+    nonemask = x < -max_tanh(eltype(x))
+    t = exp2xm1 * Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
+    ifelse(ponemask, one(x), ifelse(nonemask, -one(x), t))
 end
 
 if Sys.islinux() && Sys.ARCH === :x86_64

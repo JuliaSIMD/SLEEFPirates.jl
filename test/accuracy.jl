@@ -175,6 +175,11 @@ IntF(::Type{Float32}) = Int32
     tol = 1
     test_acc(T, fun_table, xx, tol)
 
+    xxr = range(-SLEEFPirates.max_tanh(T),SLEEFPirates.max_tanh(T),length = 100_000);
+    fun_table = Dict(tanh_fast => Base.tanh)
+    tol = 3
+    test_acc(T, fun_table, xxr, tol)
+
 
     @testset "xilogb at arbitrary values" begin
         xd = Dict{T,Int}(T(1e-30) => -100, T(2.31e-11) => -36, T(-1.0) => 0, T(1.0) => 0,
