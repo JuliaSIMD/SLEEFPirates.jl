@@ -10,7 +10,7 @@ using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, VecUnroll, N
 
 import IfElse: ifelse
 
-export Vec, logit, invlogit, nlogit, ninvlogit, log1m, tanh_fast#, loggamma
+export Vec, sigmoid_fast, tanh_fast#, loggamma
 
 const FloatType64 = Union{Float64,AbstractSIMD{<:Any,Float64}}
 const FloatType32 = Union{Float32,AbstractSIMD{<:Any,Float32}}
@@ -179,22 +179,31 @@ for func in (:atan, :hypot, :pow)
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
-@inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
-@inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
-@inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(one(x),x), x))
-@inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(x)))
-@inline log1m(x) = log1p(Base.FastMath.sub_fast(x))
+# @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
+# @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
+# @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(one(x),x), x))
+# @inline ninvlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(x)))
+# @inline log1m(x) = log1p(Base.FastMath.sub_fast(x))
 
 max_tanh(::Type{Float64}) = 19.06154746539849599509609553228539867418786340504817671278462587964799037885145
 max_tanh(::Type{Float32}) = 9.010913339828708369989037671244720498805572920317272822795576296065428827978905f0
 
 @inline function tanh_fast(x)
-    exp2xm1 = expm1(Base.FastMath.add_fast(x, x))
+    exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
     # Division is faster than approximate inversion in
     # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
-    t = exp2xm1 / Base.FastMath.add_fast(exp2xm1, typeof(x)(2))
+    t = Base.FastMath.div_fast(exp2xm1, Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
     ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
+
+# sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462
+# sigmoid_max(::Type{Float32}) = 17.3286794841963099036462718631317335849086302638474573162299687307067828965093f0
+
+@inline sigmoid_fast(x) = inv(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
+# `inv_fast` was slower than `inv`
+# @inline sigmoid_fast(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
+
+
 
 if Sys.islinux() && Sys.ARCH === :x86_64
     mvl = find_library("libmvec.so", ["/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"])

@@ -78,9 +78,10 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     Ndef1 = VectorizationBase.AVX512DQ ? Ndef1 : :($Ndef1 % UInt32)
     twopkpreshift = VectorizationBase.AVX512DQ ? :k : :(k % UInt64)
     FF = VectorizationBase.AVX512DQ ? 0x00000000000000ff : 0x000000ff
+    func_fast = Symbol(func, :_fast)
     @eval begin
         
-        @inline function ($func)(x::FloatType64)
+        @inline function $func_fast(x::FloatType64)
             N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
             N = $Ndef1
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
@@ -96,13 +97,17 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             twopk = $twopkpreshift << 0x0000000000000034
             # @show k small_part twopk twopk + small_part r
             res = reinterpret(Float64, twopk + small_part)
+            return res
+        end
+        @inline function $func(x::FloatType64)
+            res = $func_fast(x)
             res = ifelse(x >= MAX_EXP($base, Float64), Inf, res)
             res = ifelse(x <= MIN_EXP($base, Float64), 0.0, res)
             res = ifelse(isnan(x), x, res)
             return res
         end
         
-        @inline function ($func)(x::FloatType32)
+        @inline function $func_fast(x::FloatType32)
             N_float = vfmadd(x, LogBINV($base, Float32), MAGIC_ROUND_CONST(Float32))
             N = reinterpret(UInt32, N_float)
             N_float = (N_float - MAGIC_ROUND_CONST(Float32))
@@ -114,6 +119,10 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             twopk = N << 0x00000017
             # @show N N_float r small_part twopk
             res = reinterpret(Float32, twopk + small_part)
+            return res
+        end
+        @inline function $func(x::FloatType32)
+            res = $func_fast(x)
             res = ifelse(x >= MAX_EXP($base, Float32), Inf32, res)
             res = ifelse(x <= MIN_EXP($base, Float32), 0.0f0, res)
             res = ifelse(isnan(x), x, res)
@@ -177,7 +186,7 @@ else
 end
 inttype(::Type{Float32}) = Int32
 
-@inline function expm1(x::FloatType)
+@inline function expm1_fast(x::FloatType)
     T = eltype(x)
     N_float = round(x*Ln2INV(T))
     N = unsafe_trunc(inttype(T), N_float)
@@ -197,6 +206,10 @@ inttype(::Type{Float32}) = Int32
     #     end
     # end
     res = fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))
+    return res
+end
+@inline function expm1(x::FloatType)
+    res = expm1_fast(x)
     res = ifelse(x >= MAX_EXPM1(T), T(Inf), res)
     res = ifelse(x <= MIN_EXPM1(T), -one(T), res)
     res = ifelse(isnan(x), x, res)

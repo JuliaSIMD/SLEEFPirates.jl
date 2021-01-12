@@ -180,6 +180,11 @@ IntF(::Type{Float32}) = Int32
     tol = 3
     test_acc(T, fun_table, xxr, tol)
 
+    xxr = T === Float64 ? range(-100.0, 37.0, length = 100_000) : range(-50f0, 18f0, length = 100_000);
+    fun_table = Dict(SLEEFPirates.sigmoid_fast => x -> inv(1+exp(-x)))
+    tol = 3
+    test_acc(T, fun_table, xxr, tol)
+
 
     @testset "xilogb at arbitrary values" begin
         xd = Dict{T,Int}(T(1e-30) => -100, T(2.31e-11) => -36, T(-1.0) => 0, T(1.0) => 0,
