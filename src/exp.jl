@@ -73,29 +73,30 @@ end
 
 const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 
+@generated function targetspecific_truncate(v)
+    ex = if VectorizationBase.has_feature("x86_64_avx512dq")
+        :v
+    else
+        :(v % UInt32)
+    end
+    Expr(:block, Expr(:meta,:inline), ex)
+end
+
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
-    Ndef1 = :(reinterpret(UInt64, N_float))
-    Ndef1 = VectorizationBase.AVX512DQ ? Ndef1 : :($Ndef1 % UInt32)
-    twopkpreshift = VectorizationBase.AVX512DQ ? :k : :(k % UInt64)
-    FF = VectorizationBase.AVX512DQ ? 0x00000000000000ff : 0x000000ff
+    Ndef1 = :(targetspecific_truncate(reinterpret(UInt64, N_float)))
     func_fast = Symbol(func, :_fast)
     @eval begin
-        
         @inline function $func_fast(x::FloatType64)
             N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
             N = $Ndef1
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
-            # @show N_float
             r = vfmadd(N_float, LogBo256U($base, Float64), x)
             r = vfmadd(N_float, LogBo256L($base, Float64), r)
-            # @show r (N & $FF)
-            js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & $FF,))
-            # @show N js
-            k = N >>> 0x0000000000000008
+            js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & 0x000000ff,))
+            k = N >>> 0x00000008
             
             small_part = reinterpret(UInt64, vfmadd(js, expm1b_kernel($base, r), js))
-            twopk = $twopkpreshift << 0x0000000000000034
-            # @show k small_part twopk twopk + small_part r
+            twopk = (k % UInt64) << 0x0000000000000034
             res = reinterpret(Float64, twopk + small_part)
             return res
         end
@@ -117,7 +118,6 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             
             small_part = reinterpret(UInt32, expb_kernel($base, r))
             twopk = N << 0x00000017
-            # @show N N_float r small_part twopk
             res = reinterpret(Float32, twopk + small_part)
             return res
         end
@@ -179,10 +179,12 @@ end
     return exthorner(x, (1.0f0, 0.5f0, hi_order))
 end
 
-if VectorizationBase.AVX512DQ
-    @eval inttype(::Type{Float64}) = Int64
-else
-    @eval inttype(::Type{Float64}) = Int32
+@generated function inttype(::Type{Float64})
+    if VectorizationBase.has_feature("x86_64_avx512dq")
+        :Int64
+    else
+        :Int32
+    end
 end
 inttype(::Type{Float32}) = Int32
 

@@ -192,141 +192,126 @@ end
     Double(ifelse(b, V(x.hi), V(y.hi)), ifelse(b, V(x.lo), V(y.lo)))
 end
 
-if FMA_FAST
-
-    # two-prod-fma
-    @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
+# two-prod-fma
+@inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
+    if fma_fast()
         z = (x * y)
         Double(z, vfmsub(x, y, z))
-    end
-
-    @inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
-        z = (x.hi * y)
-        Double(z, vfmsub(x.hi, y, z) + x.lo * y)
-    end
-
-    @inline dmul(x::vIEEEFloat, y::Double{<:vIEEEFloat}) = dmul(y, x)
-
-    @inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-        z = x.hi * y.hi
-        Double(z, vfmsub(x.hi, y.hi, z) + x.hi * y.lo + x.lo * y.hi)
-    end
-
-    # x^2
-    @inline function dsqu(x::T) where {T<:vIEEEFloat}
-        z = x * x
-        Double(z, vfmsub(x, x, z))
-    end
-
-    @inline function dsqu(x::Double{T}) where {T<:vIEEEFloat}
-        z = x.hi * x.hi
-        Double(z, vfmsub(x.hi, x.hi, z) + (x.hi * (x.lo + x.lo)))
-    end
-
-    # sqrt(x)
-    @inline function dsqrt(x::Double{T}) where {T<:vIEEEFloat}
-        zhi = _sqrt(x.hi)
-        Double(zhi, (x.lo + vfnmadd(zhi, zhi, x.hi)) / (zhi + zhi))
-    end
-
-    # x/y
-    @inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
-        invy = inv(y.hi)
-        zhi = (x.hi * invy)
-        Double(zhi, ((vfnmadd(zhi, y.hi, x.hi) + vfnmadd(zhi, y.lo, x.lo)) * invy))
-    end
-
-    @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat)
-        ry = inv(y)
-        r = (x * ry)
-        Double(r, (vfnmadd(r, y, x) * ry))
-    end
-
-    # 1/x
-    @inline function drec(x::vIEEEFloat)
-        zhi = inv(x)
-        Double(zhi, (vfnmadd(zhi, x, one(eltype(x))) * zhi))
-    end
-
-    @inline function drec(x::Double{<:vIEEEFloat})
-        zhi = inv(x.hi)
-        Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
-    end
-
-else
-
-    #two-prod x*y
-    @inline function dmul(x::vIEEEFloat, y::vIEEEFloat)
+    else
         hx, lx = splitprec(x)
         hy, ly = splitprec(y)
         z = (x * y)
         Double(z, ((hx * hy - z) + lx * hy + hx * ly) + lx * ly)
     end
+end
 
-    @inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
+@inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat)
+    if fma_fast()
+        z = (x.hi * y)
+        Double(z, vfmsub(x.hi, y, z) + x.lo * y)
+    else
         hx, lx = splitprec(x.hi)
         hy, ly = splitprec(y)
         z = x.hi * y
         Double(z, (hx * hy - z) + lx * hy + hx * ly + lx * ly + x.lo * y)
     end
+end
+@inline dmul(x::vIEEEFloat, y::Double{<:vIEEEFloat}) = dmul(y, x)
 
-    @inline dmul(x::vIEEEFloat, y::Double{<:vIEEEFloat}) = dmul(y, x)
-
-    @inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
+@inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
+    if fma_fast()
+        z = x.hi * y.hi
+        Double(z, vfmsub(x.hi, y.hi, z) + x.hi * y.lo + x.lo * y.hi)
+    else
         hx, lx = splitprec(x.hi)
         hy, ly = splitprec(y.hi)
         z = x.hi * y.hi
         Double(z, (((hx * hy - z) + lx * hy + hx * ly) + lx * ly) + x.hi * y.lo + x.lo * y.hi)
     end
-
+end
     # x^2
-    @inline function dsqu(x::T) where {T<:vIEEEFloat}
+@inline function dsqu(x::T) where {T<:vIEEEFloat}
+    if fma_fast()
+        z = x * x
+        Double(z, vfmsub(x, x, z))
+    else
         hx, lx = splitprec(x)
         z = x * x
         Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx)
     end
+end
 
-    @inline function dsqu(x::Double{T}) where {T<:vIEEEFloat}
+@inline function dsqu(x::Double{T}) where {T<:vIEEEFloat}
+    if fma_fast()
+        z = x.hi * x.hi
+        Double(z, vfmsub(x.hi, x.hi, z) + (x.hi * (x.lo + x.lo)))
+    else
         hx, lx = splitprec(x.hi)
         z = x.hi * x.hi
         Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx + x.hi * (x.lo + x.lo))
     end
+end
 
     # sqrt(x)
-    @inline function dsqrt(x::Double{T}) where {T<:vIEEEFloat}
+@inline function dsqrt(x::Double{T}) where {T<:vIEEEFloat}
+    if fma_fast()
+        zhi = _sqrt(x.hi)
+        Double(zhi, (x.lo + vfnmadd(zhi, zhi, x.hi)) / (zhi + zhi))
+    else
         c = _sqrt(x.hi)
         u = dsqu(c)
         Double(c, (x.hi - u.hi - u.lo + x.lo) / (c + c))
     end
+end
 
     # x/y
-    @inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
+@inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat})
+    if fma_fast()
+        invy = inv(y.hi)
+        zhi = (x.hi * invy)
+        Double(zhi, ((vfnmadd(zhi, y.hi, x.hi) + vfnmadd(zhi, y.lo, x.lo)) * invy))
+    else
         invy = 1 / y.hi
         c = x.hi * invy
         u = dmul(c, y.hi)
         Double(c, ((((x.hi - u.hi) - u.lo) + x.lo) - c * y.lo) * invy)
     end
+end
 
-    @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat)
+@inline function ddiv(x::vIEEEFloat, y::vIEEEFloat)
+    if fma_fast()
+        ry = inv(y)
+        r = (x * ry)
+        Double(r, (vfnmadd(r, y, x) * ry))
+    else
         ry = 1 / y
         r = x * ry
         hx, lx = splitprec(r)
         hy, ly = splitprec(y)
         Double(r, (((-hx * hy + r * y) - lx * hy - hx * ly) - lx * ly) * ry)
     end
-
+end
 
     # 1/x
-    @inline function drec(x::T) where {T<:vIEEEFloat}
+@inline function drec(x::vIEEEFloat)
+    if fma_fast()
+        zhi = inv(x)
+        Double(zhi, (vfnmadd(zhi, x, one(eltype(x))) * zhi))
+    else
         c = 1 / x
         u = dmul(c, x)
         Double(c, (one(T) - u.hi - u.lo) * c)
     end
+end
 
-    @inline function drec(x::Double{T}) where {T<:vIEEEFloat}
+@inline function drec(x::Double{<:vIEEEFloat})
+    if fma_fast()
+        zhi = inv(x.hi)
+        Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
+        
+    else
         c = 1 / x.hi
         u = dmul(c, x.hi)
         Double(c, (one(T) - u.hi - u.lo - c * x.lo) * c)
     end
-
 end

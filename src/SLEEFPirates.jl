@@ -5,7 +5,7 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 
 using Libdl, VectorizationBase
 
-using VectorizationBase: vzero, AbstractSIMD, _Vec, FMA_FAST, data, VecUnroll, NativeTypes, FloatingTypes,
+using VectorizationBase: vzero, AbstractSIMD, _Vec, fma_fast, data, VecUnroll, NativeTypes, FloatingTypes,
     vfmadd, vfnmadd, vfmsub, vfnmsub
 
 import IfElse: ifelse
@@ -205,18 +205,21 @@ end
 
 
 
-if Sys.islinux() && Sys.ARCH === :x86_64
-    mvl = find_library("libmvec.so", ["/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"])
-    if mvl !== "libmvec.so"
-        @eval const MVECLIB = $mvl
-        VectorizationBase.REGISTER_SIZE ≥ 16 && include("svmlwrap16.jl")
-        VectorizationBase.REGISTER_SIZE ≥ 32 && include("svmlwrap32.jl")
-        VectorizationBase.REGISTER_SIZE ≥ 64 && include("svmlwrap64.jl")
-    end
-end
+# Commented out, because it probably isn't relocatable =/
+# if Sys.islinux() && Sys.ARCH === :x86_64
+#     mvl = find_library("libmvec.so", ["/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"])
+#     if mvl !== "libmvec.so"
+#         @eval const MVECLIB = $mvl
+#         VectorizationBase.REGISTER_SIZE ≥ 16 && include("svmlwrap16.jl")
+#         VectorizationBase.REGISTER_SIZE ≥ 32 && include("svmlwrap32.jl")
+#         VectorizationBase.REGISTER_SIZE ≥ 64 && include("svmlwrap64.jl")
+#     end
+# end
 
-include("precompile.jl")
-_precompile_()
+# We should minimize precompilation, because of the need for relocatability =/
+
+# include("precompile.jl")
+# _precompile_()
 
 
 end # module
