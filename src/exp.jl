@@ -78,7 +78,7 @@ const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 @inline target_trunc(v) = target_trunc(v, VectorizationBase.has_feature(Val(:x86_64_avx512dq)))
 
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
-    Ndef1 = :(targetspecific_truncate(reinterpret(UInt64, N_float)))
+    Ndef1 = :(target_trunc(reinterpret(UInt64, N_float)))
     func_fast = Symbol(func, :_fast)
     @eval begin
         @inline function $func_fast(x::FloatType64)
@@ -174,10 +174,14 @@ end
     return exthorner(x, (1.0f0, 0.5f0, hi_order))
 end
 
-@inline widest_supported_integer(::VectorizationBase.True) = Int64
-@inline widest_supported_integer(::VectorizationBase.False) = Int32
-@inline inttype(::Type{Float64}) = widest_supported_integer(VectorizationBase.has_feature(Val(:x86_64_avx512dq)))
-@inline inttype(::Type{Float32}) = Int32
+if (Sys.ARCH === :x86_64) || (Sys.ARCH === :i686)
+    @inline widest_supported_integer(::VectorizationBase.True) = Int64
+    @inline widest_supported_integer(::VectorizationBase.False) = Int32
+    @inline inttype(::Type{Float64}) = widest_supported_integer(VectorizationBase.has_feature(Val(:x86_64_avx512dq)))
+    @inline inttype(::Type{Float32}) = Int32
+else
+    @inline inttype(_) = Int
+end
 
 @inline function expm1_fast(x::FloatType)
     T = eltype(x)
