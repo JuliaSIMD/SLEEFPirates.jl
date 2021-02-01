@@ -6,7 +6,7 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 using Libdl, VectorizationBase
 
 using VectorizationBase: vzero, AbstractSIMD, _Vec, fma_fast, data, VecUnroll, NativeTypes, FloatingTypes,
-    vfmadd, vfnmadd, vfmsub, vfnmsub
+    vfmadd, vfnmadd, vfmsub, vfnmsub, True, False
 
 import IfElse: ifelse
 
