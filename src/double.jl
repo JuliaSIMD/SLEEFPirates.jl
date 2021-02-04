@@ -265,7 +265,7 @@ end
     Double(zhi, ((vfnmadd(zhi, y.hi, x.hi) + vfnmadd(zhi, y.lo, x.lo)) * invy))
 end
 @inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}, ::False)
-    invy = 1 / y.hi
+    invy = inv(y.hi)
     c = x.hi * invy
     u = dmul(c, y.hi)
     Double(c, ((((x.hi - u.hi) - u.lo) + x.lo) - c * y.lo) * invy)
@@ -276,7 +276,7 @@ end
     Double(r, (vfnmadd(r, y, x) * ry))
 end
 @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat, ::False)
-    ry = 1 / y
+    ry = inv(y)
     r = x * ry
     hx, lx = splitprec(r)
     hy, ly = splitprec(y)
@@ -289,19 +289,19 @@ end
     Double(zhi, (vfnmadd(zhi, x, one(eltype(x))) * zhi))
 end
 @inline function drec(x::vIEEEFloat, ::False)
-    c = 1 / x
+    c = inv(x)
     u = dmul(c, x)
-    Double(c, (one(T) - u.hi - u.lo) * c)
+    Double(c, (one(eltype(u.hi)) - u.hi - u.lo) * c)
 end
 
 @inline function drec(x::Double{<:vIEEEFloat}, ::True)
-        zhi = inv(x.hi)
-        Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
+    zhi = inv(x.hi)
+    Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
 end
 @inline function drec(x::Double{<:vIEEEFloat}, ::False)
-    c = 1 / x.hi
+    c = inv(x.hi)
     u = dmul(c, x.hi)
-    Double(c, (one(T) - u.hi - u.lo - c * x.lo) * c)
+    Double(c, (one(eltype(u.hi)) - u.hi - u.lo - c * x.lo) * c)
 end
 @inline drec(x) = drec(x, fma_fast())
 

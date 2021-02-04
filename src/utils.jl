@@ -27,22 +27,23 @@
 # @inline integer2float(::Type{Float32}, m::Union{Int32,Int64}) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
 @inline integer2float(::Type{Float32}, m::Int32) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
 
+@inline function integer2float(::Type{Float32}, m::Int)
+    reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
+end
+@inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int32}) where {W}
+    reinterpret(Float64, (m % Int64) << (significand_bits(Float64) % Int64))
+end
+
 @static if Int === Int64
-    @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int}) where {W}
+    @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int64}) where {W}
         reinterpret(Float64, m << significand_bits(Float64))
-    end
-    @inline function integer2float(::Type{Float32}, m::Int)
-        reinterpret(Float32, (m % Int32) << (significand_bits(Float32)) % Int32)
     end
     @inline function float2integer(d::AbstractSIMD{W,Float64}) where {W}
         (reinterpret(Int64, d) >> significand_bits(Float64))
     end
 else
     @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int64}) where {W}
-        reinterpret(Float64, m << Int64(significand_bits(Float64)))
-    end
-    @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int32}) where {W}
-        reinterpret(Float64, (m % Int64) << Int64(significand_bits(Float64)))
+        reinterpret(Float64, m << (significand_bits(Float64) % Int64))
     end
     @inline function float2integer(d::AbstractSIMD{W,Float64}) where {W}
         (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
