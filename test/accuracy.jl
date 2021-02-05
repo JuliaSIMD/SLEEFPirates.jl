@@ -1,9 +1,4 @@
 
-MRANGE(::Type{Float64}) = 10000000
-MRANGE(::Type{Float32}) = 10000
-IntF(::Type{Float64}) = Int64
-IntF(::Type{Float32}) = Int32
-
 
 @testset "Accuracy (max error in ulp) for $T" for T in (Float32, Float64)
     println("Accuracy tests for $T")
