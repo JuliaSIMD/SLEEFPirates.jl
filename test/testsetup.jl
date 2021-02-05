@@ -89,6 +89,10 @@ end
 
 strip_module_name(f::Function) = last(split(string(f), '.')) # strip module name from function f
 
+MRANGE(::Type{Float64}) = 10000000
+MRANGE(::Type{Float32}) = 10000
+IntF(::Type{Float64}) = Int64
+IntF(::Type{Float32}) = Int32
 
 function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
     N = _N + 1; i = 0

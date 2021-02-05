@@ -818,7 +818,8 @@ end
 end
 @inline function atan_fast_q(x::Vec{W}) where {W}
     I = fpinttype(eltype(x))
-    ifelse(signbit(x), vbroadcast(Val{W}(), 2 % I), vzero(Val{W}(), I))
+    q = convert(Vec{W,I}, 2 % I)
+    ifelse(signbit(x), q, zero(q))
 end
 """
     atan_fast(x)

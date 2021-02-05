@@ -77,6 +77,12 @@ const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 @inline target_trunc(v, ::VectorizationBase.False) = v % UInt32
 @inline target_trunc(v) = target_trunc(v, VectorizationBase.has_feature(Val(:x86_64_avx512dq)))
 
+@inline fast_fma(a, b, c, ::True) = fma(a, b, c)
+@inline function fast_fma(a, b, c, ::False)
+    d = dadd(dmul(Double(a),Double(b)),Double(c))
+    add_ieee(d.hi, d.lo)
+end
+
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
     Ndef1 = :(target_trunc(reinterpret(UInt64, N_float)))
     func_fast = Symbol(func, :_fast)
@@ -85,8 +91,8 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
             N = $Ndef1
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
-            r = vfmadd(N_float, LogBo256U($base, Float64), x)
-            r = vfmadd(N_float, LogBo256L($base, Float64), r)
+            r = fast_fma(N_float, LogBo256U($base, Float64), x, fma_fast())
+            r = fast_fma(N_float, LogBo256L($base, Float64), r, fma_fast())
             js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & 0x000000ff,))
             k = N >>> 0x00000008
             
@@ -108,8 +114,8 @@ for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
             N = reinterpret(UInt32, N_float)
             N_float = (N_float - MAGIC_ROUND_CONST(Float32))
 
-            r = vfmadd(N_float, LogBU($base, Float32), x)
-            r = vfmadd(N_float, LogBL($base, Float32), r)
+            r = fast_fma(N_float, LogBU($base, Float32), x, fma_fast())
+            r = fast_fma(N_float, LogBL($base, Float32), r, fma_fast())
             
             small_part = reinterpret(UInt32, expb_kernel($base, r))
             twopk = N << 0x00000017

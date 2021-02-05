@@ -62,12 +62,48 @@ end
 @inline trunclo(x::Float32) = reinterpret(Float32, reinterpret(UInt32, x) & 0xffff_f000) # clear lowest 12 bits (leave upper 12 bits)
 
 # @inline trunclo(x::VecProduct) = trunclo(Vec(data(x)))
-@inline function trunclo(x::Vec{N,Float64}) where {N}
-    reinterpret(Vec{N,Float64}, reinterpret(Vec{N,UInt64}, x) & vbroadcast(Val{N}(), 0xffff_ffff_f800_0000)) # clear lower 27 bits (leave upper 26 bits)
+@inline function trunclo(x::AbstractSIMD{N,Float64}) where {N}
+    reinterpret(Vec{N,Float64}, reinterpret(Vec{N,UInt64}, x) & convert(Vec{N,UInt64}, 0xffff_ffff_f800_0000)) # clear lower 27 bits (leave upper 26 bits)
 end
-@inline function trunclo(x::Vec{N,Float32}) where {N}
-    reinterpret(Vec{N,Float32}, reinterpret(Vec{N,UInt32}, x) & vbroadcast(Val{N}(), 0xffff_f000)) # clear lowest 12 bits (leave upper 12 bits)
+@inline function trunclo(x::AbstractSIMD{N,Float32}) where {N}
+    reinterpret(Vec{N,Float32}, reinterpret(Vec{N,UInt32}, x) & convert(Vec{N,UInt32}, 0xffff_f000)) # clear lowest 12 bits (leave upper 12 bits)
 end
+for (op,f,ff) ∈ [("fadd",:add_ieee,:(+)),("fsub",:sub_ieee,:(-)),("fmul",:mul_ieee,:(*)),("fdiv",:fdiv_ieee,:(/)),("frem",:rem_ieee,:(%))]
+    @eval begin
+        @generated $f(v1::Vec{W,T}, v2::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = VectorizationBase.binary_op($op, W, T)
+        @inline $f(s1::T, s2::T) where {T<:Union{Float32,Float64}} = $ff(s1,s2)
+        @inline $f(args::Vararg{Any,K}) where {K} = $f(promote(args...)...)
+        @inline $f(a::VecUnroll, b::VecUnroll) = VecUnroll(VectorizationBase.fmap($f, VectorizationBase.data(a), VectorizationBase.data(b)))
+    end
+end
+@inline add_ieee(a, b, c) = add_ieee(add_ieee(a, b), c)
+@inline add_ieee(a, b, c, d::Vararg{Any,K}) where {K} = add_ieee(add_ieee(a, b), add_ieee(c, d...))
+function sub_ieee!(ex)
+    ex isa Expr || return
+    if ex.head === :call
+        _f = ex.args[1]
+        if _f isa Symbol
+            f::Symbol = _f
+            if f === :(+)
+                ex.args[1] = :(SLEEFPirates.add_ieee)
+            elseif f === :(-)
+                ex.args[1] = :(SLEEFPirates.sub_ieee)
+            elseif f === :(*)
+                ex.args[1] = :(SLEEFPirates.mul_ieee)
+            elseif f === :(/)
+                ex.args[1] = :(SLEEFPirates.fdiv_ieee)
+            elseif f === :(%)
+                ex.args[1] = :(SLEEFPirates.rem_ieee)
+            end
+        end
+    end
+    foreach(sub_ieee!, ex.args)
+    esc(ex)
+end
+macro ieee(ex)
+    sub_ieee!(ex)
+end
+
 
 @inline function splitprec(x::vIEEEFloat)
     hx = trunclo(x)
@@ -200,8 +236,10 @@ end
 @inline function dmul(x::vIEEEFloat, y::vIEEEFloat, ::False)
     hx, lx = splitprec(x)
     hy, ly = splitprec(y)
-    z = (x * y)
-    Double(z, ((hx * hy - z) + lx * hy + hx * ly) + lx * ly)
+    @ieee begin
+        z = x * y
+        Double(z, (((hx * hy - z) + lx * hy + hx * ly) + lx * ly))
+    end
 end
 @inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat, ::True)
     z = (x.hi * y)
@@ -210,8 +248,10 @@ end
 @inline function dmul(x::Double{<:vIEEEFloat}, y::vIEEEFloat, ::False)
     hx, lx = splitprec(x.hi)
     hy, ly = splitprec(y)
-    z = x.hi * y
-    Double(z, (hx * hy - z) + lx * hy + hx * ly + lx * ly + x.lo * y)
+    @ieee begin
+        z = x.hi * y
+        Double(z, (hx * hy - z) + lx * hy + hx * ly + lx * ly + x.lo * y)
+    end
 end
 @inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}, ::True)
     z = x.hi * y.hi
@@ -220,8 +260,10 @@ end
 @inline function dmul(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}, ::False)
     hx, lx = splitprec(x.hi)
     hy, ly = splitprec(y.hi)
-    z = x.hi * y.hi
-    Double(z, (((hx * hy - z) + lx * hy + hx * ly) + lx * ly) + x.hi * y.lo + x.lo * y.hi)
+    @ieee begin
+        z = x.hi * y.hi
+        Double(z, (((hx * hy - z) + lx * hy + hx * ly) + lx * ly) + x.hi * y.lo + x.lo * y.hi)
+    end
 end
 @inline dmul(x::vIEEEFloat, y::Double{<:vIEEEFloat}) = dmul(y, x)
 @inline dmul(x, y) = dmul(x, y, fma_fast())
@@ -232,8 +274,10 @@ end
 end
 @inline function dsqu(x::T, ::False) where {T<:vIEEEFloat}
     hx, lx = splitprec(x)
-    z = x * x
-    Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx)
+    @ieee begin
+        z = x * x
+        Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx)
+    end
 end
 @inline function dsqu(x::Double{T}, ::True) where {T<:vIEEEFloat}
     z = x.hi * x.hi
@@ -241,8 +285,10 @@ end
 end
 @inline function dsqu(x::Double{T}, ::False) where {T<:vIEEEFloat}
     hx, lx = splitprec(x.hi)
-    z = x.hi * x.hi
-    Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx + x.hi * (x.lo + x.lo))
+    @ieee begin
+        z = x.hi * x.hi
+        Double(z, (hx * hx - z) + lx * (hx + hx) + lx * lx + x.hi * (x.lo + x.lo))
+    end
 end
 @inline dsqu(x) = dsqu(x, fma_fast())
 
@@ -253,8 +299,8 @@ end
 end
 @inline function dsqrt(x::Double{T}, ::False) where {T<:vIEEEFloat}
     c = _sqrt(x.hi)
-    u = dsqu(c)
-    Double(c, (x.hi - u.hi - u.lo + x.lo) / (c + c))
+    u = dsqu(c, False())
+    @ieee Double(c, (x.hi - u.hi - u.lo + x.lo) / (c + c))
 end
 @inline dsqrt(x) = dsqrt(x, fma_fast())
 
@@ -265,10 +311,12 @@ end
     Double(zhi, ((vfnmadd(zhi, y.hi, x.hi) + vfnmadd(zhi, y.lo, x.lo)) * invy))
 end
 @inline function ddiv(x::Double{<:vIEEEFloat}, y::Double{<:vIEEEFloat}, ::False)
-    invy = 1 / y.hi
-    c = x.hi * invy
-    u = dmul(c, y.hi)
-    Double(c, ((((x.hi - u.hi) - u.lo) + x.lo) - c * y.lo) * invy)
+    @ieee begin
+        invy = one(y.hi) / y.hi
+        c = x.hi * invy
+        u = dmul(c, y.hi, False())
+        Double(c, ((((x.hi - u.hi) - u.lo) + x.lo) - c * y.lo) * invy)
+    end
 end
 @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat, ::True)
     ry = inv(y)
@@ -276,11 +324,13 @@ end
     Double(r, (vfnmadd(r, y, x) * ry))
 end
 @inline function ddiv(x::vIEEEFloat, y::vIEEEFloat, ::False)
-    ry = 1 / y
-    r = x * ry
-    hx, lx = splitprec(r)
-    hy, ly = splitprec(y)
-    Double(r, (((-hx * hy + r * y) - lx * hy - hx * ly) - lx * ly) * ry)
+    @ieee begin
+        ry = one(y) / y
+        r = x * ry
+        hx, lx = splitprec(r)
+        hy, ly = splitprec(y)
+        Double(r, (((-hx * hy + r * y) - lx * hy - hx * ly) - lx * ly) * ry)
+    end
 end
 @inline ddiv(x, y) = ddiv(x, y, fma_fast())
     # 1/x
@@ -289,19 +339,22 @@ end
     Double(zhi, (vfnmadd(zhi, x, one(eltype(x))) * zhi))
 end
 @inline function drec(x::vIEEEFloat, ::False)
-    c = 1 / x
-    u = dmul(c, x)
-    Double(c, (one(T) - u.hi - u.lo) * c)
+    @ieee begin
+        c = one(x) / x
+        u = dmul(c, x, False())
+        Double(c, (one(eltype(u.hi)) - u.hi - u.lo) * c)
+    end
 end
 
 @inline function drec(x::Double{<:vIEEEFloat}, ::True)
-        zhi = inv(x.hi)
-        Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
+    zhi = inv(x.hi)
+    Double(zhi, ((vfnmadd(zhi, x.hi, one(eltype(x))) - (zhi * x.lo)) * zhi))
 end
 @inline function drec(x::Double{<:vIEEEFloat}, ::False)
-    c = 1 / x.hi
-    u = dmul(c, x.hi)
-    Double(c, (one(T) - u.hi - u.lo - c * x.lo) * c)
+    @ieee begin
+        c = inv(x.hi)
+        u = dmul(c, x.hi, False())
+        Double(c, (one(eltype(u.hi)) - u.hi - u.lo - c * x.lo) * c)
+    end
 end
 @inline drec(x) = drec(x, fma_fast())
-
