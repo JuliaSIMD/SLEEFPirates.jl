@@ -170,7 +170,11 @@
 
 
     xx = map(T, vcat(-10:0.0002:10, -1000:0.02:1000));
-    fun_table = Dict(SLEEFPirates.sinh => Base.sinh, SLEEFPirates.cosh => Base.cosh, SLEEFPirates.tanh => Base.tanh)
+    fun_table = Dict(
+        SLEEFPirates.sinh => Base.sinh, first ∘ SLEEFPirates.sincosh => Base.sinh,
+        SLEEFPirates.cosh => Base.cosh, last ∘ SLEEFPirates.sincosh => Base.cosh,
+        SLEEFPirates.tanh => Base.tanh
+    )
     tol = 1
     test_acc(T, fun_table, xx, tol)
 

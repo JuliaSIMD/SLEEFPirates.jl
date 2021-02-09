@@ -40,7 +40,26 @@ Compute hyperbolic cosine of `x`.
     return u
 end
 
-
+@inline function sincosh(x::V) where {V <: FloatType}
+    T = eltype(x)
+    absx = abs(x)
+    d = expk2(Double(absx))
+    isnanx = isnan(x)
+    x_too_large = absx > over_sch(T)
+    drecd = drec(d)
+    ds = dsub(d, drecd)
+    dc = dadd(d, drecd)
+    us = V(ds) * T(0.5)
+    uc = V(dc) * T(0.5)
+    us = ifelse(x_too_large, T(Inf), us)
+    uc = ifelse(x_too_large, T(Inf), uc)
+    us = ifelse(isnan(us), T(Inf), us)
+    uc = ifelse(isnan(uc), T(Inf), uc)
+    us = flipsign(us, x)
+    us = ifelse(isnanx, T(NaN), us)
+    uc = ifelse(isnanx, T(NaN), uc)
+    return us, uc
+end
 
 over_th(::Type{Float64}) = 18.714973875
 over_th(::Type{Float32}) = 18.714973875f0
