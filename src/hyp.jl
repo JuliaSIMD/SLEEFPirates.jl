@@ -51,13 +51,12 @@ end
     dc = dadd(d, drecd)
     us = V(ds) * T(0.5)
     uc = V(dc) * T(0.5)
+    alt = ifelse(isnanx, T(NaN), T(Inf))
     us = ifelse(x_too_large, T(Inf), us)
     uc = ifelse(x_too_large, T(Inf), uc)
-    us = ifelse(isnan(us), T(Inf), us)
-    uc = ifelse(isnan(uc), T(Inf), uc)
+    us = ifelse(isnan(us), alt, us)
+    uc = ifelse(isnan(uc), alt, uc)
     us = flipsign(us, x)
-    us = ifelse(isnanx, T(NaN), us)
-    uc = ifelse(isnanx, T(NaN), uc)
     return us, uc
 end
 

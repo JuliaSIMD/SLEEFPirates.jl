@@ -373,12 +373,10 @@ logkmul(::Type{Float32}) = 1.8446744073709551616f19
     I = fpinttype(T)
     o = d < floatmin(T)
     d = ifelse(o, d * logkmul(T), d)
-
     e  = ilogb2k(d * T(1.0/0.75))
     m  = ldexp3k(d, - e)
 
     e = ifelse(o, e - I(64), e)
-
     x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
 
     x2 = dsqu(x)
