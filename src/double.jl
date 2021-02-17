@@ -19,6 +19,10 @@ end
 
 (::Type{T})(x::Double{T}) where {T<:vIEEEFloat} = x.hi + x.lo
 
+Base.issubnormal(d::Double) = issubnormal(d.hi) | issubnormal(d.lo)
+
+
+
 @inline Base.eltype(d::Double{T}) where {T <: IEEEFloat} = T
 @inline function Base.eltype(d::Double{S}) where {N,T,S <: Union{Vec{N,T}, Vec{N,T}}}
     T

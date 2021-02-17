@@ -84,19 +84,19 @@ const J_TABLE= Float64[2.0^(big(j-1)/256) for j in 1:256];
 end
 
 for (func, base) in (:exp2=>Val(2), :exp=>Val(ℯ), :exp10=>Val(10))
-    Ndef1 = :(target_trunc(reinterpret(UInt64, N_float)))
     func_fast = Symbol(func, :_fast)
     @eval begin
         @inline function $func_fast(x::FloatType64)
             N_float = muladd(x, LogBo256INV($base, Float64), MAGIC_ROUND_CONST(Float64))
-            N = $Ndef1
+            N = target_trunc(reinterpret(UInt64, N_float))
             N_float = N_float - MAGIC_ROUND_CONST(Float64)
             r = fast_fma(N_float, LogBo256U($base, Float64), x, fma_fast())
             r = fast_fma(N_float, LogBo256L($base, Float64), r, fma_fast())
+            # @show (N & 0x000000ff) % Int
             js = vload(VectorizationBase.zero_offsets(stridedpointer(J_TABLE)), (N & 0x000000ff,))
             k = N >>> 0x00000008
-            
             small_part = reinterpret(UInt64, vfmadd(js, expm1b_kernel($base, r), js))
+            # return reinterpret(Float64, small_part), r, k, N_float, js
             twopk = (k % UInt64) << 0x0000000000000034
             res = reinterpret(Float64, twopk + small_part)
             return res

@@ -128,7 +128,7 @@ the natural expoenential function `exp(x)`
     e = ilogb2k(d * T(1.0/0.75))
     m = ldexp3k(d, -e)
     e = ifelse(o, e - I(64), e)
-
+    # @show e m
     x  = ddiv(dadd2(T(-1.0), m), dadd2(T(1.0), m))
     x2 = x.hi*x.hi
 
@@ -204,7 +204,7 @@ the natural expoenential function `exp(x)`
     e = ilogb2k(d * T(1.0/0.75))
     m = ldexp3k(d, -e)
     e = ifelse(o, e - I(64), e)
-
+    # @show m e
     x  = (m - one(I)) / (m + one(I))
     x2 = x * x
 
@@ -216,6 +216,18 @@ the natural expoenential function `exp(x)`
     x = ifelse((d < zero(I)) | isnan(d), T(NaN), x)
     x = ifelse(d == zero(I), T(-Inf), x)
 
+    return x
+end
+@inline function log_fast_avx512(d)
+    T = eltype(d)
+    m = VectorizationBase.vgetmant(d)
+    e = VectorizationBase.vgetexp(1.3333333333333333*d)
+    x  = (m - one(m)) / (m + one(m))
+    x2 = x * x
+
+    t = log_fast_kernel(x2)
+
+    x = x * t + narrow(T, MLN2) * e
     return x
 end
 
