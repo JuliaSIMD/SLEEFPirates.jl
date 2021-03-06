@@ -25,14 +25,14 @@ end
 end
 @inline ifelse(u::Mask, v1::Double, v2::Double) = Double(ifelse(u, v1.hi, v2.hi), ifelse(u, v1.lo, v2.lo))
 @generated function ifelse(m::VecUnroll{N,W,T}, v1::Double{V1}, v2::Double{V2}) where {N,W,T,V1,V2}
-    q = Expr(:block, Expr(:meta, :inline), :(md = m.data), :(v1h = v1.hi), :(v2h = v2.hi), :(v1l = v1.lo), :(v2l = v2.lo))
+    q = Expr(:block, Expr(:meta, :inline), :(md = data(m)), :(v1h = v1.hi), :(v2h = v2.hi), :(v1l = v1.lo), :(v2l = v2.lo))
     if V1 <: VecUnroll
-        push!(q.args, :(v1hd = v1h.data))
-        push!(q.args, :(v1ld = v1l.data))
+        push!(q.args, :(v1hd = data(v1h)))
+        push!(q.args, :(v1ld = data(v1l)))
     end
     if V2 <: VecUnroll
-        push!(q.args, :(v2hd = v2h.data))
-        push!(q.args, :(v2ld = v2l.data))
+        push!(q.args, :(v2hd = data(v2h)))
+        push!(q.args, :(v2ld = data(v2l)))
     end
     th = Expr(:tuple); tl = Expr(:tuple)
     for n ∈ 1:N+1

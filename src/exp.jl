@@ -3,6 +3,7 @@
 MAGIC_ROUND_CONST(::Type{Float64}) = 6.755399441055744e15
 MAGIC_ROUND_CONST(::Type{Float32}) = 1.2582912f7
 
+
 # min and max arguments by base and type
 MAX_EXP(::Val{2},  ::Type{Float64}) =  1024.0                   # log2 2^1023*(2-2^-52)
 MIN_EXP(::Val{2},  ::Type{Float64}) = -1022.0                   # log2(big(2)^-1023*(2-2^-52))
