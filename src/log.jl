@@ -195,7 +195,7 @@ end
 Compute the natural logarithm of `x`. The inverse of the natural logarithm is
 the natural expoenential function `exp(x)`
 """
-@inline function log_fast(d::FloatType)
+@inline function log_fast(d::FloatType, ::False)
     T = eltype(d)
     I = fpinttype(T)
     o = d < floatmin(T)
@@ -205,7 +205,7 @@ the natural expoenential function `exp(x)`
     m = ldexp3k(d, -e)
     e = ifelse(o, e - I(64), e)
     # @show m e
-    x  = (m - one(I)) / (m + one(I))
+    x  = (m - one(m)) / (m + one(m))
     x2 = x * x
 
     t = log_fast_kernel(x2)
@@ -218,16 +218,18 @@ the natural expoenential function `exp(x)`
 
     return x
 end
-@inline function log_fast_avx512(d)
-    T = eltype(d)
+@inline log_fast(d::AbstractSIMD{2,Float32}, ::True) = log_fast(d, False())
+@inline function log_fast(d::AbstractSIMD{W,T}, ::True) where {W,T<:Union{Float32,Float64}}
     m = VectorizationBase.vgetmant(d)
-    e = VectorizationBase.vgetexp(1.3333333333333333*d)
+    e = VectorizationBase.vgetexp(T(1.3333333333333333)*d)
+    en = narrow(T, MLN2) * e
     x  = (m - one(m)) / (m + one(m))
     x2 = x * x
 
     t = log_fast_kernel(x2)
 
-    x = x * t + narrow(T, MLN2) * e
-    return x
+    return muladd(x, t, en)
 end
+@inline log_fast(d::AbstractSIMD) = log_fast(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+@inline log_fast(d::Union{Float32,Float64}) = log_fast(d, False())
 

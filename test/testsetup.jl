@@ -1,5 +1,6 @@
 
 using SLEEFPirates, VectorizationBase, Aqua
+using VectorizationBase: data
 using Test
 
 using Base.Math: significand_bits
@@ -98,7 +99,7 @@ function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
     N = _N + 1; i = 0
     x = Vector{T}(undef, N * W)
     for n ∈ 1:N
-        v = u.data[n]
+        v = data(u)[n]
         for w ∈ 0:W-1
             x[(i += 1)] = VectorizationBase.extractelement(v, w)
         end
@@ -156,10 +157,10 @@ function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.St
     end
     vu = ntuple(Val(N)) do n
         VectorizationBase.VecUnroll((
-            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * (( W + w) / denom)), Val(W))),
-            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((2W + w) / denom)), Val(W))),
-            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((3W + w) / denom)), Val(W))),
-            Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * ((4W + w) / denom)), Val(W)))
+            Vec(ntuple(w -> T(xf[n] + δ[n] * (( W + w) / denom)), Val(W))...),
+            Vec(ntuple(w -> T(xf[n] + δ[n] * ((2W + w) / denom)), Val(W))...),
+            Vec(ntuple(w -> T(xf[n] + δ[n] * ((3W + w) / denom)), Val(W))...),
+            Vec(ntuple(w -> T(xf[n] + δ[n] * ((4W + w) / denom)), Val(W))...)
         ))
     end
     if loginputs

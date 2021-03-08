@@ -156,7 +156,7 @@ end
     for n ∈ 1:N+1
         push!(t.args, :(ifelse(xlod[$n], neg2, zer)))
     end
-    q = Expr(:block,Expr(:meta,:inline), :(neg2 = vbroadcast(Val{$W}(), $(-2 % I))), :(zer = vzero(Vec{$W,$I})), :(xlod = xlo.data), :(VecUnroll($t)))
+    q = Expr(:block,Expr(:meta,:inline), :(neg2 = vbroadcast(Val{$W}(), $(-2 % I))), :(zer = vzero(Vec{$W,$I})), :(xlod = data(xlo)), :(VecUnroll($t)))
     q
 end
 @inline function atan2k_fast(y::V, x::V) where {V <: vIEEEFloat}
