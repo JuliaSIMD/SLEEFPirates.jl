@@ -1,5 +1,9 @@
 
 
+const exp = VectorizationBase.vexp
+const exp2 = VectorizationBase.vexp2
+const exp10 = VectorizationBase.vexp10
+
 # Oscard Smith
 # https://github.com/JuliaLang/julia/blob/3253fb5a60ad841965eb6bd218921d55101c0842/base/special/expm1.jl
 MAX_EXPM1(::Type{Float64}) =  709.436139303104   # log 2^1023*(2-2^-52)

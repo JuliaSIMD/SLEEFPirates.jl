@@ -4,7 +4,7 @@
     println("Accuracy tests for $T")
 
 
-    xx = nextfloat(SLEEFPirates.MIN_EXP(Val(ℯ),T)):T(0.02):prevfloat(SLEEFPirates.MAX_EXP(Val(ℯ),T));
+    xx = nextfloat(SLEEFPirates.VectorizationBase.MIN_EXP(Val(ℯ),T)):T(0.02):prevfloat(SLEEFPirates.VectorizationBase.MAX_EXP(Val(ℯ),T));
     # xx = T == Float32 ? map(T, vcat(-10:0.0002:10, -50:0.1:50)) : map(T, vcat(-10:0.0002:10, -705:0.1:705))
     fun_table = Dict(SLEEFPirates.exp => Base.exp)
     tol = 2
@@ -148,13 +148,13 @@
     #     0.5SLEEFPirates.MIN_EXP(Val(2),T):T(0.023):0.5SLEEFPirates.MAX_EXP(Val(2),T),
     #     0.5SLEEFPirates.MAX_EXP(Val(2),T):T(0.02):SLEEFPirates.MAX_EXP(Val(2),T)
     # )
-    xx = nextfloat(SLEEFPirates.MIN_EXP(Val(2),T)):T(0.02):prevfloat(SLEEFPirates.MAX_EXP(Val(2),T));
+    xx = nextfloat(SLEEFPirates.VectorizationBase.MIN_EXP(Val(2),T)):T(0.02):prevfloat(SLEEFPirates.VectorizationBase.MAX_EXP(Val(2),T));
     fun_table = Dict(SLEEFPirates.exp2 => Base.exp2)
     tol = 2#1 #FIXME
     test_acc(T, fun_table, xx, tol)
 
 
-    xx = nextfloat(SLEEFPirates.MIN_EXP(Val(10),T)):T(0.02):prevfloat(SLEEFPirates.MAX_EXP(Val(10),T));
+    xx = nextfloat(SLEEFPirates.VectorizationBase.MIN_EXP(Val(10),T)):T(0.02):prevfloat(SLEEFPirates.VectorizationBase.MAX_EXP(Val(10),T));
     # xx = map(T, vcat(-10:0.0002:10, -35:0.023:1000, -300:0.01:300))
     fun_table = Dict(SLEEFPirates.exp10 => Base.exp10)
     tol = 2
