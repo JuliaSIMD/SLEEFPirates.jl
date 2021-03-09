@@ -231,9 +231,9 @@ end
     return muladd(x, t, en)
 end
 @static if Base.libllvm_version ≥ v"11"
-    @inline log_fast(d::AbstractSIMD) = log_fast(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+    @inline log_fast(d::AbstractSIMD) = log_fast(float(d), VectorizationBase.has_feature(Val(:x86_64_avx512f)))
 else
-    @inline log_fast(d::AbstractSIMD) = log_fast(d, False())
+    @inline log_fast(d::AbstractSIMD) = log_fast(float(d), False())
 end
 @inline log_fast(d::Union{Float32,Float64}) = log_fast(d, False())
 
