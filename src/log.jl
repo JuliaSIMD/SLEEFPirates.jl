@@ -236,4 +236,11 @@ else
     @inline log_fast(d::AbstractSIMD) = log_fast(float(d), False())
 end
 @inline log_fast(d::Union{Float32,Float64}) = log_fast(d, False())
+@generated function log_fast(x::VecUnroll{N,1,T,T}) where {N,T}
+    quote
+        $(Expr(:meta,:inline))
+        lx = log_fast(VectorizationBase.transpose_vecunroll(x))
+        VecUnroll(Base.Cartesian.@ntuple $(N+1) n -> lx(n))
+    end
+end
 
