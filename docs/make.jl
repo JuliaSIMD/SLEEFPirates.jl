@@ -6,12 +6,12 @@ makedocs(;
     pages=[
         "Home" => "index.md",
     ],
-    repo="https://github.com/chriselrod/SLEEFPirates.jl/blob/{commit}{path}#L{line}",
+    repo="https://github.com/JuliaSIMD/SLEEFPirates.jl/blob/{commit}{path}#L{line}",
     sitename="SLEEFPirates.jl",
     authors="Chris Elrod",
     assets=[],
 )
 
 deploydocs(;
-    repo="github.com/chriselrod/SLEEFPirates.jl",
+    repo="github.com/JuliaSIMD/SLEEFPirates.jl",
 )
