@@ -313,6 +313,7 @@ end
 else
     @inline log_fast(::Val{BASE}, d::AbstractSIMD) where {BASE} = log_fast(Val{BASE}(), float(d), False())
 end
+@inline log_fast(::Val{BASE}, d::AbstractSIMD{2,Float32}) where {BASE} = log_fast(Val{BASE}(), float(d), False())
 @inline log_fast(d::Union{Float32,Float64}) = log_fast(Val{ℯ}(), d, False())
 @inline log2_fast(d::Union{Float32,Float64}) = log_fast(Val{2}(), d, False())
 @inline log10_fast(d::Union{Float32,Float64}) = log_fast(Val{10}(), d, False())
