@@ -6,7 +6,7 @@ using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEF
 using Libdl, VectorizationBase
 
 using VectorizationBase: vzero, AbstractSIMD, _Vec, fma_fast, data, VecUnroll, NativeTypes, FloatingTypes, vIEEEFloat,
-    vfmadd, vfnmadd, vfmsub, vfnmsub, True, False,
+    vfmadd, vfnmadd, vfmsub, vfnmsub, True, False, One,
     Double, dadd, dadd2, dsub, dsub2, dmul, dsqu, dsqrt, ddiv, drec, scale,
     dnormalize
 
@@ -131,7 +131,8 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :expm1, :cbrt,
-             :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast, :atan2_fast, :log_fast, :cbrt_fast)#, :exp, :exp2, :exp10
+             :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast, :atan2_fast,
+             :log_fast, :log2_fast, :log10_fast, :cbrt_fast)#, :exp, :exp2, :exp10
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
         $func(x::Real) = $func(float(x))
@@ -149,16 +150,16 @@ for func ∈ (:sin, :cos)
     @eval @inline $funcpifast(v::AbstractSIMD{W,T}) where {W,T} = $funcfast(T(π) * v)
     @eval @inline $funcpi(i::MM) = $funcpi(float(i))
 end
-@inline sincospi(v::AbstractSIMD{W,T}) where {W,T} = sincos(T(π) * v)
+@inline Base.sincospi(v::AbstractSIMD{W,T}) where {W,T} = sincos(T(π) * v)
 @inline sincospi_fast(v::AbstractSIMD{W,T}) where {W,T} = sincos_fast(T(π) * v)
-@inline sincospi(v::Vec{W,T}) where {W,T} = sincos(T(π) * v)
+@inline Base.sincospi(v::Vec{W,T}) where {W,T} = sincos(T(π) * v)
 @inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :expm1)#, :exp, :exp2, :exp10
     @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
     @eval @inline Base.$func(x::MM) = $func(Vec(x))
 end
-for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :cbrt, :sincos)
+for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :log2, :log10, :cbrt, :sincos)
     func_fast = Symbol(func, :_fast)
     @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
     @eval @inline Base.$func(x::MM) = $func_fast(Vec(x))
@@ -183,8 +184,8 @@ end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
 @inline Base.FastMath.log_fast(v::AbstractSIMD) = log_fast(float(v))
-@inline Base.FastMath.log2_fast(v::AbstractSIMD) = log_fast(float(v)) * 1.4426950408889634
-@inline Base.FastMath.log10_fast(v::AbstractSIMD) = log_fast(float(v)) * 0.4342944819032518
+@inline Base.FastMath.log2_fast(v::AbstractSIMD) = log2_fast(float(v))
+@inline Base.FastMath.log10_fast(v::AbstractSIMD) = log10_fast(float(v))
 
 # @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
 # @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
