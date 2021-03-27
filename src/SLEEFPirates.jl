@@ -150,9 +150,11 @@ for func ∈ (:sin, :cos)
     @eval @inline $funcpifast(v::AbstractSIMD{W,T}) where {W,T} = $funcfast(T(π) * v)
     @eval @inline $funcpi(i::MM) = $funcpi(float(i))
 end
-@inline Base.sincospi(v::AbstractSIMD{W,T}) where {W,T} = sincos(T(π) * v)
+if VERSION ≥ v"1.6"
+    @inline Base.sincospi(v::AbstractSIMD{W,T}) where {W,T} = sincos(T(π) * v)
+    @inline Base.sincospi(v::Vec{W,T}) where {W,T} = sincos(T(π) * v)
+end
 @inline sincospi_fast(v::AbstractSIMD{W,T}) where {W,T} = sincos_fast(T(π) * v)
-@inline Base.sincospi(v::Vec{W,T}) where {W,T} = sincos(T(π) * v)
 @inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :expm1)#, :exp, :exp2, :exp10
