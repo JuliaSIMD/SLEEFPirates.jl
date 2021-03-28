@@ -157,7 +157,7 @@ end
 @inline sincospi_fast(v::AbstractSIMD{W,T}) where {W,T} = sincos_fast(T(π) * v)
 @inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
 
-for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log2, :log10, :log1p, :expm1)#, :exp, :exp2, :exp10
+for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log1p, :expm1)#, :exp, :exp2, :exp10
     @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
     @eval @inline Base.$func(x::MM) = $func(Vec(x))
 end
