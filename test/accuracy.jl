@@ -116,6 +116,9 @@
     fun_table = Dict(SLEEFPirates.log10 => Base.log10, SLEEFPirates.log2 => Base.log2)
     tol = 1
     test_acc(T, fun_table, xx, tol)
+    fun_table = Dict(SLEEFPirates.log10_fast => Base.log10, SLEEFPirates.log2_fast => Base.log2)
+    tol = 3
+    test_acc(T, fun_table, xx, tol)
 
 
     xx = map(T, vcat(0.0001:0.0001:10, 0.0001:0.1:10000, 10.0.^-(0:0.02:300), -10.0.^-(0:0.02:300)));
