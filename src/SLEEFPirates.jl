@@ -209,6 +209,7 @@ end
 # sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462
 # sigmoid_max(::Type{Float32}) = 17.3286794841963099036462718631317335849086302638474573162299687307067828965093f0
 
+# @inline sigmoid_fast(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
 @inline sigmoid_fast(x) = inv(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
 # `inv_fast` was slower than `inv`
 # @inline sigmoid_fast(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
