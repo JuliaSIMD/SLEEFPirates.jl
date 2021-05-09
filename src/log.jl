@@ -121,28 +121,17 @@ the natural expoenential function `exp(x)`
 """
 @inline function log(d::V) where {V <: FloatType}
     T = eltype(d)
-    I = fpinttype(T)
-    o = d < floatmin(T)
-    d = ifelse(o, d * T(Int64(1) << 32) * T(Int64(1) << 32), d)
-
-    e = ilogb2k(d * T(1.0/0.75))
-    m = ldexp3k(d, -e)
-    e = ifelse(o, e - I(64), e)
-    # @show e m
+    m, e = splitfloat(d)
     x  = ddiv(dadd2(T(-1.0), m), dadd2(T(1.0), m))
     x2 = x.hi*x.hi
-
     t = log_kernel(x2)
-
     s = dmul(MDLN2(T), convert(T,e))
     s = dadd(s, scale(x, T(2.0)))
     s = dadd(s, x2*x.hi*t)
     r = V(s)
-
     r = ifelse(isinf(d), T(Inf), r)
     r = ifelse((d < 0) | isnan(d), T(NaN), r)
     r = ifelse(d == 0, T(-Inf), r)
-
     return r
 end
 

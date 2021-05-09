@@ -76,28 +76,52 @@ end
     c1f =  2.2241256237030029296875f0
     @horner x c1f c2f c3f c4f c5f c6f
 end
+"""
+Algorithm:
 
+        movsxd  rax, edi
+        imul    rax, rax, 1431655766
+        mov     rcx, rax
+        shr     rcx, 63
+        shr     rax, 32
+        add     eax, ecx
+        ret
+"""
+@inline function divby3(a32::AbstractSIMD{<:Any,T}) where {T}
+    c = 1431655766
+    a = a32 % Int64
+    rax = a * c
+    rcx = rax
+    rcx >>>= 63
+    rax >>>= 32
+    (rcx + rax) % T
+end
+@inline divby3(x::Int32) = x ÷ Int32(3)
+@inline divby3(x::Int64) = ((x%Int32) ÷ Int32(3)) % Int64
 """
     cbrt_fast(x)
 
 Return `x^{1/3}`.
 """
-function cbrt_fast(d::V) where {V <: FloatType}
+@inline function cbrt_fast(d::V) where {V <: FloatType}
     T  = eltype(d)
-    e  = ilogbk(abs(d)) + 1
-    d  = ldexp2k(d, -e)
-    r  = (e + 6144) % 3
+    e  = absilogbk(d)
+    d  = ldexp2k_nem1(d, e)
+    eplus6144 = e + 6145
+    edivby3 = divby3(eplus6144)
+    r = eplus6144 - edivby3*3
+    # r  = (e + 6144) % 3
     q  = ifelse(r == 1, V(M2P13), V(1))
     q  = ifelse(r == 2, V(M2P23), q)
-    q  = ldexp2k(q, (e + 6144) ÷ 3 - 2048)
+    q  = ldexp2k(q, edivby3 - 2048)
     q  = flipsign(q, d)
     d  = abs(d)
     x  = cbrt_kernel(d)
     y  = x * x
     y  = y * y
-    x -= (d * y - x) * T(1 / 3)
+    x  = vfnmadd(vfmsub(d, y, x), T(1 / 3), x)
     y  = d * x * x
-    y = (y - T(2 / 3) * y * (y * x - 1)) * q
+    y = (y - T(2 / 3) * y * vfmsub(y, x, 1)) * q
 end
 
 
@@ -108,9 +132,11 @@ Return `x^{1/3}`. The prefix operator `∛` is equivalent to `cbrt`.
 """
 function cbrt(d::V) where {V <: FloatType}
     T  = eltype(d)
-    e  = ilogbk(abs(d)) + 1
-    d  = ldexp2k(d, -e)
-    r  = (e + 6144) % 3
+    e  = absilogbk(d)
+    d  = ldexp2k_nem1(d, e)
+    eplus6144 = e + 6145
+    edivby3 = divby3(eplus6144)
+    r  = eplus6144 - edivby3*3
     q2 = ifelse(r == 1, MD2P13(T), Double(V(1)))
     q2 = ifelse(r == 2, MD2P23(T), q2)
     q2 = flipsign(q2, d)
@@ -118,7 +144,7 @@ function cbrt(d::V) where {V <: FloatType}
     x  = cbrt_kernel(d)
     y  = x * x
     y  = y * y
-    x -= (d * y - x) * T(1 / 3)
+    x  = vfnmadd(vfmsub(d, y, x), T(1 / 3), x)
     z  = x
     u  = dsqu(x)
     u  = dsqu(u)
@@ -129,7 +155,7 @@ function cbrt(d::V) where {V <: FloatType}
     v  = dadd(dsqu(z), y)
     v  = dmul(v, d)
     v  = dmul(v, q2)
-    z  = ldexp2k(V(v), (e + 6144) ÷ 3 - 2048)
+    z  = ldexp2k(V(v), edivby3 - 2048)
     # @show z
     # z  = ifelse(isinf(d), flipsign(T(Inf), q2.hi), z)
     z = ifelse(isfinite(d), z, d)

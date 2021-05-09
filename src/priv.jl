@@ -31,7 +31,7 @@ end
 
 Computes `a × 2^n`.
 """
-@inline function ldexpk(x::FloatType, q::IntegerType)
+@inline function _ldexpk(x::FloatType, q::IntegerType, ::False)
     T = eltype(x)
     bias = exponent_bias(T)
     emax = exponent_raw_max(T)
@@ -46,6 +46,10 @@ Computes `a × 2^n`.
     u = integer2float(T, q)
     x * u
 end
+@inline _ldexpk(x::AbstractSIMD{W,T}, q, ::True) where {W,T} = VectorizationBase.vscalef(x, convert(T,q))
+@inline ldexpk(x::Union{Float32,Float64}, q) = _ldexpk(x, q, False())
+@inline ldexpk(x::AbstractSIMD, q) = _ldexpk(x, q, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+@inline ldexpk(x::AbstractSIMD{2,Float32}, q) = _ldexpk(x, q, False())
 
 @inline function ldexp2k(x::FloatType, e::I) where {I <: IntegerType}
     eshift = e >> one(I)
@@ -54,6 +58,12 @@ end
         pow2i(eltype(x), e - eshift)
     )
 end
+
+@inline _ldexp2k_nem1(d, e, ::False) = ldexp2k(d, -(e+1))
+@inline _ldexp2k_nem1(d, e, ::True) = VectorizationBase.vgetmant(d, Val(2))
+@inline ldexp2k_nem1(d::AbstractSIMD{2,Float32}, e) = _ldexp2k_nem1(d, e, False())
+@inline ldexp2k_nem1(d::AbstractSIMD, e) = _ldexp2k_nem1(d, e, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+@inline ldexp2k_nem1(d::Union{Float32,Float64}, e) = _ldexp2k_nem1(d, e, False())
 
 @inline function ldexp3k(x::T, e::Integer) where {T<:Union{Float32,Float64}}
     UT = Base.uinttype(T)
@@ -78,7 +88,7 @@ words this returns the binary exponent of `x` so that
 
 where `significand ∈ [1, 2)`.
 """
-@inline function ilogbk(d::FloatType)
+@inline function _ilogbk(d::FloatType, ::False)
     T = eltype(d)
     I = fpinttype(T)
     m = d < (T(2)^-threshold_exponent(T))
@@ -86,6 +96,16 @@ where `significand ∈ [1, 2)`.
     q = float2integer(d) & I(exponent_raw_max(T))
     q = ifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
 end
+@inline _ilogbk(d::AbstractSIMD{W,T}, ::True) where {W,T} = convert(Base.inttype(T), VectorizationBase.vgetexp(d))
+@inline ilogbk(d::Union{Float32,Float64}) = _ilogbk(d, False())
+@inline ilogbk(d::AbstractSIMD{2,Float32}) = _ilogbk(d, False())
+@inline ilogbk(d::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = _ilogbk(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+@inline _absilogbk(d, ::False) = _ilogbk(abs(d), False())
+@inline _absilogbk(d, ::True) = _ilogbk(d, True())
+@inline absilogbk(d::Union{Float32,Float64}) = _ilogbk(abs(d), False())
+@inline absilogbk(d::AbstractSIMD{2,Float32}) = _absilogbk(d, False())
+@inline absilogbk(d::AbstractSIMD{W,T}) where {W,T} = _absilogbk(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+
 # @inline ilogbk(d::SIMDPirates.AbstractVectorProduct) = ilogbk(Vec(SIMDPirates.data(d)))
 # @inline ilogb2k(d::SIMDPirates.AbstractVectorProduct) = ilogb2k(Vec(SIMDPirates.data(d)))
 # similar to ilogbk, but argument has to be a normalized float value
@@ -368,25 +388,39 @@ end
 
 logkmul(::Type{Float64}) = 1.8446744073709551616e19
 logkmul(::Type{Float32}) = 1.8446744073709551616f19
+
+@inline function _splitfloat(d, ::False)
+  T = eltype(d)
+  I = fpinttype(T)
+  o = d < floatmin(T)
+  d = ifelse(o, d * logkmul(T), d)
+  e  = ilogb2k(d * T(1.0/0.75))
+  m  = ldexp3k(d, - e)
+
+  e = ifelse(o, e - I(64), e)
+  m, T(e)
+end
+@inline function _splitfloat(d, ::True)
+  T = eltype(d)
+  m = VectorizationBase.vgetmant(d) # m ∈ (0.75,1.5)
+  e = VectorizationBase.vgetexp(T(1.3333333333333333)*d)
+  m, e
+end
+@inline splitfloat(d::Union{Float32,Float64}) = _splitfloat(d, False())
+@inline splitfloat(d::AbstractSIMD{2,Float32}) = _splitfloat(d, False())
+@inline splitfloat(d::AbstractSIMD) = _splitfloat(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
 @inline function logk(d::V) where (V <: FloatType)
-    T = eltype(d)
-    I = fpinttype(T)
-    o = d < floatmin(T)
-    d = ifelse(o, d * logkmul(T), d)
-    e  = ilogb2k(d * T(1.0/0.75))
-    m  = ldexp3k(d, - e)
+  T = eltype(d)
+  m, e = splitfloat(d)
+  x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
 
-    e = ifelse(o, e - I(64), e)
-    x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
+  x2 = dsqu(x)
 
-    x2 = dsqu(x)
+  t  = logk_kernel(x2)
 
-    t  = logk_kernel(x2)
-
-    s = dmul(MDLN2(T), V(e))
-    s = dadd(s, scale(x, T(2.0)))
-    s = dadd(s, dmul(dmul(x2, x), t))
-    return s
-
+  s = dmul(MDLN2(T), e)
+  s = dadd(s, scale(x, T(2.0)))
+  s = dadd(s, dmul(dmul(x2, x), t))
+  return s
 end
 

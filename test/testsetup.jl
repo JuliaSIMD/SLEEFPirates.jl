@@ -180,54 +180,56 @@ function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.St
     # @test tu1 ≈ tu2
 end
 
+function test_function_acc(::Type{T}, xfun::F1, fun::F2, xx, tol, debug, tol_debug) where {T,F1,F2}
+  rmax = 0.0
+  rmean = 0.0
+  xmax = map(zero, first(xx))
+  for x in xx
+    q = xfun(x...)
+    c = fun(map(BigFloat, x)...)
+    u = countulp(T, q, c)
+    rmax = max(rmax, u)
+    xmax = rmax == u ? x : xmax
+    rmean += u
+    if debug && u > tol_debug
+      @show strip_module_name(xfun), q, strip_module_name(fun), T(c), x, ulp(T(c))
+    end
+  end
+  rmean = rmean / length(xx)
+
+  fmtxloc = isa(xmax, Tuple) ? join(xmax, ", ") : string(xmax)
+  println(
+    rpad(strip_module_name(xfun), 18, " "), ": max ", rmax,
+    rpad(" at x = " * fmtxloc, 40, " "),  ": mean ", rmean
+  )
+
+  t = @test trunc(rmax, digits=1) <= tol
+
+  # Vector test is mostly to make sure that they do not error
+  # Results should either be the same as scalar
+  # Or they're from another library (e.g., GLIBC), and may differ slighlty
+  W = VectorizationBase.pick_vector_width(T)
+  test_vector(xfun, fun, W, first(xx), last(xx), tol)
+  test_vector(xfun, fun, Val(2), first(xx), last(xx), tol)
+  if W ≥ 4
+    test_vector(xfun, fun, Val(4), first(xx), last(xx), tol)
+  end
+  if W ≥ 8
+    # test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
+    test_vector(xfun, fun, Val(8), first(xx), last(xx), tol)
+  end
+  if W ≥ 16
+    test_vector(xfun, fun, Val(16), first(xx), last(xx), tol)
+  end
+end
+
 # test the accuracy of a function where fun_table is a Dict mapping the function you want
 # to test to a reference function
 # xx is an array of values (which may be tuples for multiple arugment functions)
 # tol is the acceptable tolerance to test against
 function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
     @testset "accuracy $(strip_module_name(xfun))" for (xfun, fun) in fun_table
-
-        rmax = 0.0
-        rmean = 0.0
-        xmax = map(zero, first(xx))
-        for x in xx
-            q = xfun(x...)
-            c = fun(map(BigFloat, x)...)
-            u = countulp(T, q, c)
-            rmax = max(rmax, u)
-            xmax = rmax == u ? x : xmax
-            rmean += u
-            if debug && u > tol_debug
-                @show strip_module_name(xfun), q, strip_module_name(fun), T(c), x, ulp(T(c))
-            end
-        end
-        rmean = rmean / length(xx)
-
-        t = @test trunc(rmax, digits=1) <= tol
-
-        
-        fmtxloc = isa(xmax, Tuple) ? join(xmax, ", ") : string(xmax)
-        println(
-            rpad(strip_module_name(xfun), 18, " "), ": max ", rmax,
-            rpad(" at x = " * fmtxloc, 40, " "),  ": mean ", rmean
-        )
-
-        # Vector test is mostly to make sure that they do not error
-        # Results should either be the same as scalar
-        # Or they're from another library (e.g., GLIBC), and may differ slighlty
-        W = VectorizationBase.pick_vector_width(T)
-        test_vector(xfun, fun, W, first(xx), last(xx), tol)
-        test_vector(xfun, fun, Val(2), first(xx), last(xx), tol)
-        if W ≥ 4
-            test_vector(xfun, fun, Val(4), first(xx), last(xx), tol)
-        end
-        if W ≥ 8
-            # test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
-            test_vector(xfun, fun, Val(8), first(xx), last(xx), tol)
-        end
-        if W ≥ 16
-            test_vector(xfun, fun, Val(16), first(xx), last(xx), tol)
-        end
+      test_function_acc(T, xfun, fun, xx, tol, debug, tol_debug)
     end
 end
 
