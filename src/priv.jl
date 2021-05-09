@@ -115,7 +115,7 @@ end
     (float2integer(d) & I(exponent_raw_max(T))) - I(exponent_bias(T))
 end
 
-@inline function atan2k_fast_kernel(x::FloatType64)    
+@inline function atan2k_fast_kernel(x::FloatType64)
     c20d =  1.06298484191448746607415e-05
     c19d = -0.000125620649967286867384336
     c18d =  0.00070557664296393412389774
@@ -412,6 +412,7 @@ end
 @inline function logk(d::V) where (V <: FloatType)
   T = eltype(d)
   m, e = splitfloat(d)
+
   x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
 
   x2 = dsqu(x)
@@ -423,4 +424,3 @@ end
   s = dadd(s, dmul(dmul(x2, x), t))
   return s
 end
-
