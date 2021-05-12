@@ -102,7 +102,7 @@ where `significand ∈ [1, 2)`.
     q = ifelse(m, q - (I(threshold_exponent(T)) + I(exponent_bias(T))), q - I(exponent_bias(T)))
 end
 if Base.libllvm_version ≥ v"11"
-  @inline _ilogbk(d::AbstractSIMD{W,T}, ::True) where {W,T} = convert(Base.inttype(T), VectorizationBase.vgetexp(d))
+  @inline _ilogbk(d::AbstractSIMD{W,T}, ::True) where {W,T} = convert(fpinttype(T), VectorizationBase.vgetexp(d))
   @inline ilogbk(d::Union{Float32,Float64}) = _ilogbk(d, False())
   @inline ilogbk(d::AbstractSIMD{2,Float32}) = _ilogbk(d, False())
   @inline ilogbk(d::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = _ilogbk(d, VectorizationBase.has_feature(Val(:x86_64_avx512f)))
