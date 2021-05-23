@@ -3,12 +3,11 @@ module SLEEFPirates
 using Base: llvmcall
 using Base.Math: uinttype, exponent_bias, exponent_mask, significand_bits, IEEEFloat, exponent_raw_max
 
-using Libdl, VectorizationBase
+using VectorizationBase
+using Static: True, False, One, lt, StaticInt
 
 using VectorizationBase: vzero, AbstractSIMD, _Vec, fma_fast, data, VecUnroll, NativeTypes, FloatingTypes, vIEEEFloat,
-    vfmadd, vfnmadd, vfmsub, vfnmsub, True, False, One,
-    Double, dadd, dadd2, dsub, dsub2, dmul, dsqu, dsqrt, ddiv, drec, scale,
-    dnormalize
+    vfmadd, vfnmadd, vfmsub, vfnmsub, Double, dadd, dadd2, dsub, dsub2, dmul, dsqu, dsqrt, ddiv, drec, scale, dnormalize
 
 
 import IfElse: ifelse

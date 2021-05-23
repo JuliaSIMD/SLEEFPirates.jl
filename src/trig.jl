@@ -31,7 +31,7 @@ end
     c3 = -0.0001981069071916863322258f0
     c2 =  0.00833307858556509017944336f0
     c1 = -0.166666597127914428710938f0
-    return dadd(c1, (x.hi * (@horner x.hi c2 c3 c4)))
+    return dadd(c1, (x.hi * (evalpoly(x.hi, (c2, c3, c4)))))
 end
 
 @inline function sin(d::V) where V <: FloatType64
@@ -189,7 +189,7 @@ end
     c3 = -0.0001981069071916863322258f0
     c2 =  0.00833307858556509017944336f0
     c1 = -0.166666597127914428710938f0
-    return @horner x c1 c2 c3 c4
+    return evalpoly(x, (c1, c2, c3, c4))
 end
 
 @inline function sin_fast(d::FloatType64)
@@ -329,14 +329,14 @@ function sincos_fast end
     a3 = -0.000198412698278911770864914
     a2 =  0.0083333333333191845961746
     a1 = -0.166666666666666130709393
-    return @horner x a1 a2 a3 a4 a5 a6
+    return evalpoly(x, (a1, a2, a3, a4, a5, a6))
 end
 
 @inline function sincos_a_kernel(x::FloatType32)
     a3 = -0.000195169282960705459117889f0
     a2 =  0.00833215750753879547119141f0
     a1 = -0.166666537523269653320312f0
-    return @horner x a1 a2 a3
+    return evalpoly(x, (a1, a2, a3))
 end
 
 @inline function sincos_b_kernel(x::FloatType64)
@@ -347,7 +347,7 @@ end
     b3 = -0.00138888888888714019282329
     b2 =  0.0416666666666665519592062
     b1 = -0.50
-    return @horner x b1 b2 b3 b4 b5 b6 b7
+    return evalpoly(x, (b1, b2, b3, b4, b5, b6, b7))
 end
 
 @inline function sincos_b_kernel(x::FloatType32)
@@ -356,7 +356,7 @@ end
     b3 = -0.00138888787478208541870117f0
     b2 =  0.0416666641831398010253906f0
     b1 = -0.5f0
-    return @horner x b1 b2 b3 b4 b5
+    return evalpoly(x, (b1, b2, b3, b4, b5))
 end
 
 @inline function sincos_fast(d::FloatType64)
@@ -596,7 +596,7 @@ end
     c3 =  0.0540687143802642822265625f0
     c2 =  0.133325666189193725585938f0
     c1 =  0.33333361148834228515625f0
-    return @horner x c1 c2 c3 c4 c5 c6 c7
+    return evalpoly(x, (c1, c2, c3, c4, c5, c6, c7))
 end
 
 @inline function tan_fast(d::FloatType64)
@@ -688,7 +688,7 @@ end
     c3 =  0.0540687143802642822265625f0
     c2 =  0.133325666189193725585938f0
     c1 =  0.33333361148834228515625f0
-    return dadd(c1,  x.hi * (@horner x.hi c2 c3 c4 c5 c6 c7))
+    return dadd(c1,  x.hi * evalpoly(x.hi, (c2, c3, c4, c5, c6, c7)))
 end
 
 @inline function tan(d::V) where V <: FloatType64

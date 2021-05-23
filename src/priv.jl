@@ -256,13 +256,13 @@ const under_expk(::Type{Float32}) = -104f0
     return estrin(x, (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10))
 end
 
-@inline function  expk_kernel(x::FloatType32)
+@inline function expk_kernel(x::FloatType32)
     c5 = 0.00136324646882712841033936f0
     c4 = 0.00836596917361021041870117f0
     c3 = 0.0416710823774337768554688f0
     c2 = 0.166665524244308471679688f0
     c1 = 0.499999850988388061523438f0
-    return @horner x c1 c2 c3 c4 c5
+    return evalpoly(x, (c1, c2, c3, c4, c5))
 end
 
 @inline function expk(d::Double{V}) where {V <: vIEEEFloat}
@@ -303,13 +303,13 @@ end
     return dadd(dmul(x, u), c1)
 end
 
-@inline function  expk2_kernel(x::Double{<:FloatType32})
+@inline function expk2_kernel(x::Double{<:FloatType32})
     c5 = 0.1980960224f-3
     c4 = 0.1394256484f-2
     c3 = 0.8333456703f-2
     c2 = 0.4166637361f-1
     c1 = 0.166666659414234244790680580464f0
-    u = @horner x.hi c2 c3 c4 c5
+    u = evalpoly(x.hi, (c2, c3, c4, c5))
     return dadd(dmul(x, u), c1)
 end
 
@@ -343,7 +343,7 @@ end
     c3 = 0.285714285511134091777308
     c2 = 0.400000000000914013309483
     c1 = 0.666666666666664853302393
-    return @horner x c1 c2 c3 c4 c5 c6 c7 c8
+    return evalpoly(x, (c1, c2, c3, c4, c5, c6, c7, c8))
 end
 
 @inline function logk2_kernel(x::FloatType32)
@@ -351,7 +351,7 @@ end
     c3 = 0.285112679004669189453125f0
     c2 = 0.400007992982864379882812f0
     c1 = 0.666666686534881591796875f0
-    return @horner x c1 c2 c3 c4
+    return evalpoly(x, (c1, c2, c3, c4))
 end
 
 @inline function logk2(d::Double{V}) where {V <: vIEEEFloat}
@@ -393,7 +393,7 @@ end
     c3 = 0.285112679004669189453125f0
     c2 = 0.400007992982864379882812f0
     c1 = Double(0.66666662693023681640625f0, 3.69183861259614332084311f-9)
-    dadd(dmul(x, @horner x.hi c2 c3 c4), c1)
+    dadd(dmul(x, evalpoly(x.hi, (c2, c3, c4))), c1)
 end
 
 logkmul(::Type{Float64}) = 1.8446744073709551616e19
