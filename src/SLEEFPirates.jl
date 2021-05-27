@@ -130,7 +130,7 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :expm1, :cbrt,
-             :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast, :atan2_fast,
+             :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast,# :atan2_fast,
              :log_fast, :log2_fast, :log10_fast, :cbrt_fast)#, :exp, :exp2, :exp10
     @eval begin
         $func(a::Float16) = Float16.($func(Float32(a)))
@@ -161,11 +161,14 @@ for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log1p, :expm1)#, :exp
     @eval @inline Base.$func(x::MM) = $func(Vec(x))
 end
 for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :log2, :log10, :cbrt, :sincos)
-    func_fast = Symbol(func, :_fast)
-    @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}}= $func_fast(x)
-    @eval @inline Base.$func(x::MM) = $func_fast(Vec(x))
+  func_fast = Symbol(func, :_fast)
+  @eval @inline Base.$func(x::AbstractSIMD) = $func_fast(float(x))
+  @eval @inline Base.FastMath.$func_fast(x::AbstractSIMD) = $func_fast(float(x))
 end
-
+@inline Base.FastMath.atan_fast(a::T, b::Number) where {T<:AbstractSIMD} = atan_fast(a, T(b))
+@inline Base.FastMath.atan_fast(a::Number, b::T) where {T<:AbstractSIMD} = atan_fast(T(a), b)
+@inline Base.FastMath.atan_fast(a::T, b::T) where {T<:AbstractSIMD} = atan_fast(a, b)
+@inline Base.FastMath.atan_fast(a::AbstractSIMD, b::AbstractSIMD) = ((c,d) = promote(a,b); atan_fast(c, d))
 for func in (:atan, :hypot, :pow)
     func2 = func === :pow ? :^ : func
     ptyp = func === :pow ? :FloatingTypes : :NativeTypes
@@ -184,10 +187,6 @@ for func in (:atan, :hypot, :pow)
 end
 ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
-@inline Base.FastMath.log_fast(v::AbstractSIMD) = log_fast(float(v))
-@inline Base.FastMath.log2_fast(v::AbstractSIMD) = log2_fast(float(v))
-@inline Base.FastMath.log10_fast(v::AbstractSIMD) = log10_fast(float(v))
-
 # @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
 # @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
 # @inline nlogit(x) = log(Base.FastMath.div_fast(Base.FastMath.sub_fast(one(x),x), x))
@@ -204,7 +203,7 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
     t = Base.FastMath.div_fast(exp2xm1, Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
     ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
-
+@inline Base.FastMath.tanh_fast(x::AbstractSIMD) = tanh_fast(x)
 # sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462
 # sigmoid_max(::Type{Float32}) = 17.3286794841963099036462718631317335849086302638474573162299687307067828965093f0
 
