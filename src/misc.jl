@@ -27,7 +27,7 @@ Exponentiation operator, returns `x` raised to the power `y`.
     return result
 
 end
-@inline pow_fast(x, y) = exp2(y*log2(x))
+@inline pow_fast(x, y) = exp2(y*log2_fast(x))
 
 
 @inline function cbrt_kernel(x::FloatType64)
@@ -144,12 +144,11 @@ end
 Compute the hypotenuse `\\sqrt{x^2+y^2}` avoiding overflow and underflow.
 """
 @inline function hypot(x::T, y::T) where {T<:vIEEEFloat}
-    a = abs(x)
-    b = abs(y)
+  a = abs(x)
+  b = abs(y)
 
-    x = min(a,b)
-    y = max(a,b)
-
-    r = ifelse(x == 0, y, y / x)
-    x * sqrt(T(1.0) + r * r)
+  x = min(a,b)
+  y = max(a,b)
+  r = y / x
+  ifelse(x == 0, y, x*sqrt(muladd(r,r, one(T))))
 end

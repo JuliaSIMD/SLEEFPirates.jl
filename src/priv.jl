@@ -385,7 +385,7 @@ end
     c1 = Double(V(0.666666666666666629659233), V(3.80554962542412056336616e-17))
     estr =  estrin(x.hi, (c2, c3, c4, c5, c6, c7, c8, c9, c10))
     xestr = dmul(x, estr)
-    dadd(xestr, c1) #should be dadd2, but there is an unresolved performance issue
+    dadd2(xestr, c1) #should be dadd2, but there is an unresolved performance issue
 end
 
 @inline function logk_kernel(x::Double{<:FloatType32})

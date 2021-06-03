@@ -67,7 +67,15 @@
 
 @inline evalpoly(x, p::Tuple{T1}) where {T1} = only(p)
 @inline evalpoly(x, p::Tuple{T1,T2}) where {T1,T2} = muladd(p[2], x, p[1])
-@inline evalpoly(x, p::Tuple{T1,T2,T3,Vararg{Any,N}}) where {T1,T2,T3,N} = evalpoly(x, (ntuple(n -> p[n], Val(N+1))..., muladd(p[end], x, p[end-1])))
+@generated function frontnp1(x::Tuple, y, ::Val{N}) where {N}
+  t = Expr(:tuple); gf = GlobalRef(Core,:getfield)
+  for n ∈ 1:N+1
+    push!(t.args, Expr(:call, gf, :x, n, false))
+  end
+  push!(t.args, :y)
+  Expr(:block, Expr(:meta,:inline), t)
+end
+@inline evalpoly(x, p::Tuple{T1,T2,T3,Vararg{Any,N}}) where {T1,T2,T3,N} = evalpoly(x, frontnp1(p, muladd(p[end], x, p[end-1]), Val(N)))
 
 @inline estrin(x::VecUnroll, p::NTuple{N}) where {N} = evalpoly(x, p)
 @inline estrin(x, p::Tuple{Vararg{Any,N}}) where {N} = estrin(x, p, StaticInt{N}() & StaticInt{3}(), lt(StaticInt{N}(), StaticInt(7)))
@@ -78,10 +86,17 @@
   res = muladd(x2, muladd(x, p[end], p[end-1]), muladd(x, p[end-2], p[end-3]))
   return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N-4)))
 end
+@generated function _slice_end(x::Tuple, ::Val{R}, ::Val{N}) where {R,N}
+  t = Expr(:tuple); gf = GlobalRef(Core,:getfield)
+  for n ∈ N-R+1:N
+    push!(t.args, Expr(:call, gf, :x, n, false))
+  end
+  Expr(:block, Expr(:meta,:inline), t)
+end
 @inline function estrin(x, p::Tuple{Vararg{Any,N}}, ::StaticInt{R}, ::False) where {N,R}
   x2 = Base.FastMath.mul_fast(x, x)
   x4 = Base.FastMath.mul_fast(x2, x2)
-  res = evalpoly(x, p[N-R+1:N])
+  res = evalpoly(x, _slice_end(p, Val(R), Val(N)))
   return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N-R)))
 end
 @inline function __estrin(x, x2, x4, ex, p1, p2, p3, p4)
