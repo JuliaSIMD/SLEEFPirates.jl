@@ -128,16 +128,24 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
 
 # fallback definitions
 
+@generated function to_vecunrollscalar(v::Vec{W,T}, ::StaticInt{N}) where {N,W,T}
+  t = Expr(:tuple)
+  for n ∈ 0:N
+    push!(t.args, :(VectorizationBase.extractelement(v, $n)))
+  end
+  Expr(:block, Expr(:meta,:inline), :(VecUnroll($t)))
+end
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :expm1, :cbrt,
              :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast,# :atan2_fast,
              :log_fast, :log2_fast, :log10_fast, :cbrt_fast)#, :exp, :exp2, :exp10
-    @eval begin
-        $func(a::Float16) = Float16.($func(Float32(a)))
-        $func(x::Real) = $func(float(x))
-        @inline $func(v::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v))
-        @inline $func(i::MM) = $func(Vec(i))
-    end
+  @eval begin
+    $func(a::Float16) = Float16.($func(Float32(a)))
+    $func(x::Real) = $func(float(x))
+    @inline $func(v::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v))
+    @inline $func(i::MM) = $func(Vec(i))
+    @inline $func(v::VecUnroll{N,1,T,T}) where {N,T} = to_vecunrollscalar($func(VectorizationBase.transpose_vecunroll(v)), StaticInt{N}())
+  end
 end
 # Tπ(::Type{T}) where {T} = promote_type(T, typeof(π))(π)
 for func ∈ (:sin, :cos)
@@ -157,13 +165,17 @@ end
 @inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log1p, :expm1)#, :exp, :exp2, :exp10
-    @eval @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
-    @eval @inline Base.$func(x::MM) = $func(Vec(x))
+  @eval begin
+    @inline Base.$func(x::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64,Int32,UInt32,Int64,UInt64}} = $func(x)
+    @inline Base.$func(x::MM) = $func(Vec(x))
+  end
 end
 for func ∈ (:sin, :cos, :tan, :asin, :acos, :atan, :log, :log2, :log10, :cbrt, :sincos)
   func_fast = Symbol(func, :_fast)
-  @eval @inline Base.$func(x::AbstractSIMD) = $func_fast(float(x))
-  @eval @inline Base.FastMath.$func_fast(x::AbstractSIMD) = $func_fast(float(x))
+  @eval begin
+    @inline Base.$func(x::AbstractSIMD) = $func_fast(float(x))
+    @inline Base.FastMath.$func_fast(x::AbstractSIMD) = $func_fast(float(x))
+  end
 end
 @inline Base.FastMath.atan_fast(a::T, b::Number) where {T<:AbstractSIMD} = atan_fast(a, T(b))
 @inline Base.FastMath.atan_fast(a::Number, b::T) where {T<:AbstractSIMD} = atan_fast(T(a), b)
@@ -197,11 +209,11 @@ max_tanh(::Type{Float64}) = 19.0615474653984959950960955322853986741878634050481
 max_tanh(::Type{Float32}) = 9.010913339828708369989037671244720498805572920317272822795576296065428827978905f0
 
 @inline function tanh_fast(x)
-    exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
-    # Division is faster than approximate inversion in
-    # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
-    t = Base.FastMath.div_fast(exp2xm1, Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
-    ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
+  exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
+  # Division is faster than approximate inversion in
+  # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
+  t = Base.FastMath.div_fast(exp2xm1, Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
+  ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
 @inline Base.FastMath.tanh_fast(x::AbstractSIMD) = tanh_fast(x)
 # sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462

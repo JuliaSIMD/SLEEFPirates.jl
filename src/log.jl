@@ -304,11 +304,11 @@ end
 @inline log_fast(d::Union{Float32,Float64}) = log_fast(Val{ℯ}(), d, False())
 @inline log2_fast(d::Union{Float32,Float64}) = log_fast(Val{2}(), d, False())
 @inline log10_fast(d::Union{Float32,Float64}) = log_fast(Val{10}(), d, False())
-@generated function log_fast(::Val{BASE}, x::VecUnroll{N,1,T,T}) where {N,T,BASE}
-    quote
-        $(Expr(:meta,:inline))
-        lx = log_fast(Val{$BASE}(), VectorizationBase.transpose_vecunroll(x))
-        VecUnroll(Base.Cartesian.@ntuple $(N+1) n -> lx(n))
-    end
-end
+# @generated function log_fast(::Val{BASE}, x::VecUnroll{N,1,T,T}) where {N,T,BASE}
+#     quote
+#         $(Expr(:meta,:inline))
+#         lx = log_fast(Val{$BASE}(), VectorizationBase.transpose_vecunroll(x))
+#         VecUnroll(Base.Cartesian.@ntuple $(N+1) n -> lx(n))
+#     end
+# end
 

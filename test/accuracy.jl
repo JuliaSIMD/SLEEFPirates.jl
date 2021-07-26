@@ -135,6 +135,14 @@
     tol = 1
     test_acc(T, fun_table, txx, tol)
 
+    xx1 = map(Tuple{T,T}, [(x,y) for x = 0:0.20:100, y = 0.1:0.20:100])[:];
+    xx2 = map(Tuple{T,T}, [(x,y) for x = 0:0.21:100, y = 0.1:0.22:100])[:];
+    xx3 = map(Tuple{T,T}, [(x,y) for x = 2.1, y = -1000:0.1:1000]);
+    txx = vcat(xx1, xx2, xx2);
+    fun_table = Dict(SLEEFPirates.pow_fast => Base.:^);
+    tol = 10
+    test_acc(T, fun_table, txx, tol)
+
 
     xx = map(T, vcat(prevfloat(0.0):0.2:10000, 1.1.^(-1000:1000), 2.1.^(-1000:957)));
     fun_table = Dict(SLEEFPirates.cbrt_fast => Base.cbrt)
