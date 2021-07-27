@@ -135,6 +135,24 @@ include("misc.jl")   # miscallenous math functions including pow and cbrt
   end
   Expr(:block, Expr(:meta,:inline), :(VecUnroll($t)))
 end
+@generated function to_vecunrollscalar(v::VecUnroll{M,W,T,V}, ::StaticInt{N}) where {M,W,T,N,V<:VectorizationBase.AbstractSIMDVector{W,T}}
+  t = Expr(:tuple)
+  n = 0
+  q = Expr(:block, Expr(:meta,:inline), :(d = VectorizationBase.data(v)))
+  for m ∈ 0:M
+    vm = Symbol(:v_,m)
+    push!(q.args, :($vm = getfield(d, $(m+1))))
+    for w ∈ 0:W-1
+      push!(t.args, :(VectorizationBase.extractelement($vm, $w)))
+      n == N && break
+      n += 1
+    end
+    n == N && break
+  end
+  push!(q.args, :(VecUnroll($t)))
+  q
+end
+
 for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :asinh, :acosh, :atanh, :log, :log2, :log10, :log1p, :expm1, :cbrt,
              :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast,# :atan2_fast,
