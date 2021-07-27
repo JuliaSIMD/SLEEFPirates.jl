@@ -143,44 +143,51 @@ function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.St
     # @test tu1 ≈ tu2
 end
 vbig(x) = big.(x)
-function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol) where {W,N,T}
-    xf = nextfloat.(xf); xl = prevfloat.(xl);
-    δ = xl .- xf
-    denom = 5W + 1
-    loginputs = any(δ .> 1e3) && all(xf .> -1)
-    if loginputs
-        xf = log.(xf)
-        δ = log.(xl) .- xf
-    end
-    vxes1 = ntuple(Val(N)) do n
-        Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * (w / denom)), Val(W)))
-    end
-    vu = ntuple(Val(N)) do n
-        VectorizationBase.VecUnroll((
-            Vec(ntuple(w -> T(xf[n] + δ[n] * (( W + w) / denom)), Val(W))...),
-            Vec(ntuple(w -> T(xf[n] + δ[n] * ((2W + w) / denom)), Val(W))...),
-            Vec(ntuple(w -> T(xf[n] + δ[n] * ((3W + w) / denom)), Val(W))...),
-            Vec(ntuple(w -> T(xf[n] + δ[n] * ((4W + w) / denom)), Val(W))...)
-        ))
-    end
-    if loginputs
-        vxes1 = exp.(vxes1)
-        vu = exp.(vu)
-    end
-    t1 = tovector(xfun(vxes1...))
-    t2 = T.(fun.(vbig.(tovector.(vxes1))...))
-    # if t1 ≉ t2
-        # @show vxes1
-    # end
+function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol, broken::Bool) where {W,N,T}
+  xf = nextfloat.(xf); xl = prevfloat.(xl);
+  δ = xl .- xf
+  denom = 5W + 1
+  loginputs = any(δ .> 1e3) && all(xf .> -1)
+  if loginputs
+    xf = log.(xf)
+    δ = log.(xl) .- xf
+  end
+  vxes1 = ntuple(Val(N)) do n
+    Vec(ntuple(w -> Core.VecElement{T}(xf[n] + δ[n] * (w / denom)), Val(W)))
+  end
+  vu = ntuple(Val(N)) do n
+    VectorizationBase.VecUnroll((
+      Vec(ntuple(w -> T(xf[n] + δ[n] * (( W + w) / denom)), Val(W))...),
+      Vec(ntuple(w -> T(xf[n] + δ[n] * ((2W + w) / denom)), Val(W))...),
+      Vec(ntuple(w -> T(xf[n] + δ[n] * ((3W + w) / denom)), Val(W))...),
+      Vec(ntuple(w -> T(xf[n] + δ[n] * ((4W + w) / denom)), Val(W))...)
+    ))
+  end
+  if loginputs
+    vxes1 = exp.(vxes1)
+    vu = exp.(vu)
+  end
+  t1 = tovector(xfun(vxes1...))
+  t2 = T.(fun.(vbig.(tovector.(vxes1))...))
+  # if t1 ≉ t2
+  # @show vxes1
+  # end
+  tu1 = tovector(xfun(vu...))
+  tu2 = T.(fun.(vbig.(tovector.(vu))...))
+  test1 = maximum(countulp.(t1, t2)) ≤ tol
+  test2 = maximum(countulp.(tu1, tu2)) ≤ tol
+  if test1 | (!broken)
     @test maximum(countulp.(t1, t2)) ≤ tol
-    # @test t1 ≈ t2
-    tu1 = tovector(xfun(vu...))
-    tu2 = T.(fun.(vbig.(tovector.(vu))...))
+  else
+    @test_broken maximum(countulp.(t1, t2)) ≤ tol
+  end    
+  if test2 | (!broken)
     @test maximum(countulp.(tu1, tu2)) ≤ tol
-    # @test tu1 ≈ tu2
+  else
+    @test_broken maximum(countulp.(tu1, tu2)) ≤ tol
+  end
 end
-
-function test_function_acc(::Type{T}, xfun::F1, fun::F2, xx, tol, debug, tol_debug) where {T,F1,F2}
+function test_function_acc(::Type{T}, xfun::F1, fun::F2, xx, tol, debug, tol_debug, broken) where {T,F1,F2}
   rmax = 0.0
   rmean = 0.0
   xmax = map(zero, first(xx))
@@ -203,23 +210,26 @@ function test_function_acc(::Type{T}, xfun::F1, fun::F2, xx, tol, debug, tol_deb
     rpad(" at x = " * fmtxloc, 40, " "),  ": mean ", rmean
   )
 
-  t = @test trunc(rmax, digits=1) <= tol
-
+  if broken
+    @test_broken trunc(rmax, digits=1) <= tol
+  else
+    @test trunc(rmax, digits=1) <= tol
+  end
   # Vector test is mostly to make sure that they do not error
   # Results should either be the same as scalar
   # Or they're from another library (e.g., GLIBC), and may differ slighlty
   W = VectorizationBase.pick_vector_width(T)
-  test_vector(xfun, fun, W, first(xx), last(xx), tol)
-  test_vector(xfun, fun, Val(2), first(xx), last(xx), tol)
+  test_vector(xfun, fun, W, first(xx), last(xx), tol, broken)
+  test_vector(xfun, fun, Val(2), first(xx), last(xx), tol, broken)
   if W ≥ 4
-    test_vector(xfun, fun, Val(4), first(xx), last(xx), tol)
+    test_vector(xfun, fun, Val(4), first(xx), last(xx), tol, broken)
   end
   if W ≥ 8
     # test_vector(xfun, fun, Val(6), first(xx), last(xx), tol)
-    test_vector(xfun, fun, Val(8), first(xx), last(xx), tol)
+    test_vector(xfun, fun, Val(8), first(xx), last(xx), tol, broken)
   end
   if W ≥ 16
-    test_vector(xfun, fun, Val(16), first(xx), last(xx), tol)
+    test_vector(xfun, fun, Val(16), first(xx), last(xx), tol, broken)
   end
 end
 
@@ -227,9 +237,9 @@ end
 # to test to a reference function
 # xx is an array of values (which may be tuples for multiple arugment functions)
 # tol is the acceptable tolerance to test against
-function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5)
+function test_acc(T, fun_table, xx, tol; debug = false, tol_debug = 5, broken=false)
     @testset "accuracy $(strip_module_name(xfun))" for (xfun, fun) in fun_table
-      test_function_acc(T, xfun, fun, xx, tol, debug, tol_debug)
+      test_function_acc(T, xfun, fun, xx, tol, debug, tol_debug, broken)
     end
 end
 
