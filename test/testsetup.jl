@@ -108,39 +108,43 @@ function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
 end
 tovector(v::VectorizationBase.AbstractSIMDVector{W}) where {W} = [VectorizationBase.extractelement(v,w) for w ∈ 0:W-1]
 
-function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::T, xl::T, tol) where {W,T<:Number}
-    xf = nextfloat(xf); xl = prevfloat(xl);
-    δ = xl - xf
-    loginputs = (δ > 1e3) & (xf > 0)
-    if loginputs
-        xf = log(xf)
-        δ = log(xl) - xf
-    end
-    denom = 5W + 1
-    vxes1 = Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (w / denom)), Val(W)))
-    vu = VectorizationBase.VecUnroll((
-        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (( W + w) / denom)), Val(W))),
-        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((2W + w) / denom)), Val(W))),
-        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((3W + w) / denom)), Val(W))),
-        Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((4W + w) / denom)), Val(W)))
-    ))
-    if loginputs
-        vxes1 = exp(vxes1)
-        vu = exp(vu)
-    end
-    t1 = tovector(xfun(vxes1));
-    # @show xf, xl
-    t2 = T.(fun.(big.(tovector(vxes1))));
-    # if t1 ≉ t2
-        # @show vxes1
-    # end
-    # @test t1 ≈ t2
-    # @show W
+function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::T, xl::T, tol, broken::Bool) where {W,T<:Number}
+  xf = nextfloat(xf); xl = prevfloat(xl);
+  δ = xl - xf
+  loginputs = (δ > 1e3) & (xf > 0)
+  if loginputs
+    xf = log(xf)
+    δ = log(xl) - xf
+  end
+  denom = 5W + 1
+  vxes1 = Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (w / denom)), Val(W)))
+  vu = VectorizationBase.VecUnroll((
+    Vec(ntuple(w -> Core.VecElement{T}(xf + δ * (( W + w) / denom)), Val(W))),
+    Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((2W + w) / denom)), Val(W))),
+    Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((3W + w) / denom)), Val(W))),
+    Vec(ntuple(w -> Core.VecElement{T}(xf + δ * ((4W + w) / denom)), Val(W)))
+  ))
+  if loginputs
+    vxes1 = exp(vxes1)
+    vu = exp(vu)
+  end
+  t1 = tovector(xfun(vxes1));
+  # @show xf, xl
+  t2 = T.(fun.(big.(tovector(vxes1))));
+  # if t1 ≉ t2
+  # @show vxes1
+  # end
+  # @test t1 ≈ t2
+  # @show W
+  tu1 = tovector(xfun(vu));
+  tu2 = T.(fun.(big.(tovector(vu))));
+  if broken
+    @test_broken maximum(countulp.(t1, t2)) ≤ tol
+    @test_broken maximum(countulp.(tu1, tu2)) ≤ tol
+  else
     @test maximum(countulp.(t1, t2)) ≤ tol
-    tu1 = tovector(xfun(vu));
-    tu2 = T.(fun.(big.(tovector(vu))));
     @test maximum(countulp.(tu1, tu2)) ≤ tol
-    # @test tu1 ≈ tu2
+  end
 end
 vbig(x) = big.(x)
 function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol, broken::Bool) where {W,N,T}
