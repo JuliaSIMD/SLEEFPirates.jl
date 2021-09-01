@@ -139,15 +139,17 @@ end
   t = Expr(:tuple)
   n = 0
   q = Expr(:block, Expr(:meta,:inline), :(d = VectorizationBase.data(v)))
+  dobreak = false
   for m ∈ 0:M
     vm = Symbol(:v_,m)
     push!(q.args, :($vm = getfield(d, $(m+1))))
     for w ∈ 0:W-1
       push!(t.args, :(VectorizationBase.extractelement($vm, $w)))
-      n == N && break
+      dobreak = n == N
+      dobreak && break
       n += 1
     end
-    n == N && break
+    dobreak && break
   end
   push!(q.args, :(VecUnroll($t)))
   q
