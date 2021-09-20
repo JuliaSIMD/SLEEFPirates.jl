@@ -4,8 +4,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-src/#*#
-tests/#*#
+*#
 *~
 *.mem
 src/svmlwrap.jl

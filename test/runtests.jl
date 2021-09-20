@@ -1,3 +1,4 @@
+using Aqua
 include("testsetup.jl")
 
 @show Sys.CPU_NAME

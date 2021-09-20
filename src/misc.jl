@@ -4,30 +4,81 @@
 Exponentiation operator, returns `x` raised to the power `y`.
 """
 @inline function pow(x::V, y::V) where {V <: FloatType}
-    T = eltype(x)
-    yi = unsafe_trunc(fpinttype(T), y)
-    yisint = yi == y
-    yisodd = isodd(yi) & yisint
-    absx = abs(x)
-    logkx = logk(absx)
+  T = eltype(x)
+  yi = unsafe_trunc(fpinttype(T), y)
+  yisint = yi == y
+  yisodd = isodd(yi) & yisint
+  absx = abs(x)
+  logkx = logk(absx)
 
-    logkxy = dmul(logkx, y)
+  logkxy = dmul(logkx, y)
+
+  if (VERSION ≥ v"1.6") && (T === Float64)
+    result = exp_hilo(logkxy.hi, logkxy.lo, Val(ℯ), VectorizationBase.has_feature(Val(:x86_64_avx512f)))
+  else
     result = expk(logkxy)
+  end
+  
+  result = ifelse(isnan(result), V(Inf), result)
+  result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
 
-    result = ifelse(isnan(result), V(Inf), result)
-    result = ifelse(x > 0, result, ifelse(~yisint, V(NaN), ifelse(yisodd, -result, result)))
+  efx = flipsign(abs(x) - one(x), y)
+  # result = ifelse(y == V(Inf), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+  result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
+  result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
+  result = ifelse(isnan(x) | isnan(y), V(NaN), result)
+  result = ifelse((y == 0) | (x == 1), V(1.0), result)
 
-    efx = flipsign(abs(x) - one(x), y)
-    # result = ifelse(y == V(Inf), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
-    result = ifelse(isinf(y), ifelse(efx < 0, V(0.0), ifelse(efx == 0, V(1.0), V(Inf))), result)
-    result = ifelse(isinf(x) | (x == 0), ifelse(yisodd, _sign(x), V(1.0)) * ifelse(ifelse(x == 0, -y, y) < 0, V(0.0), V(Inf)), result)
-    result = ifelse(isnan(x) | isnan(y), V(NaN), result)
-    result = ifelse((y == 0) | (x == 1), V(1.0), result)
-
-    return result
+  return result
 
 end
 @inline pow_fast(x, y) = exp2(y*log2_fast(x))
+
+const J_TABLE_BASE = Ref(Base.Math.J_TABLE)
+@inline base_exp_table_pointer() = VectorizationBase.stridedpointer(Base.unsafe_convert(Ptr{UInt64}, pointer_from_objref(J_TABLE_BASE)), VectorizationBase.LayoutPointers.StrideIndex{1,(1,),1}((StaticInt{8}(),), (StaticInt{0}(),)))
+
+@inline function exp_hilo(x::Union{Float64,AbstractSIMD{<:Any,Float64}}, xlo::Union{Float64,AbstractSIMD{<:Any,Float64}}, ::Val{B}, ::False) where {B}
+  N_float = muladd(x, VectorizationBase.LogBo256INV(Val{B}(), Float64), VectorizationBase.MAGIC_ROUND_CONST(Float64))
+  N = VectorizationBase.target_trunc(reinterpret(UInt64, N_float))
+  N_float = N_float - VectorizationBase.MAGIC_ROUND_CONST(Float64)
+  r = VectorizationBase.fast_fma(N_float, VectorizationBase.LogBo256U(Val{B}(), Float64), x, fma_fast())
+  r = VectorizationBase.fast_fma(N_float, VectorizationBase.LogBo256L(Val{B}(), Float64), r, fma_fast())
+  # @show (N & 0x000000ff) % Int
+  j = vload(base_exp_table_pointer(), (N & 0x000000ff,))
+  jU = reinterpret(Float64, Base.Math.JU_CONST | (j&Base.Math.JU_MASK))
+  jL = reinterpret(Float64, Base.Math.JL_CONST | (j >> 8))
+  k = N >>> 0x00000008
+  very_small = muladd(jU, VectorizationBase.expm1b_kernel(Val{B}(), r), jL)
+  small_part = muladd(jU, xlo, very_small) + jU
+  # small_part = reinterpret(UInt64, vfmadd(js, expm1b_kernel(Val{B}(), r), js))
+  # return reinterpret(Float64, small_part), r, k, N_float, js
+  twopk = (k % UInt64) << 0x0000000000000034
+  res = reinterpret(Float64, twopk + reinterpret(UInt64, small_part))
+  return res
+end
+@inline function exp_hilo(x::Union{Float64,AbstractSIMD{<:Any,Float64}}, xlo::Union{Float64,AbstractSIMD{<:Any,Float64}}, ::Val{B}, ::True) where {B}
+  N_float = muladd(x, VectorizationBase.LogBo256INV(Val{B}(), Float64), VectorizationBase.MAGIC_ROUND_CONST(Float64))
+  N = VectorizationBase.target_trunc(reinterpret(UInt64, N_float))
+  N_float = N_float - VectorizationBase.MAGIC_ROUND_CONST(Float64)
+  r = fma(N_float, VectorizationBase.LogBo256U(Val{B}(), Float64), x)
+  r = fma(N_float, VectorizationBase.LogBo256L(Val{B}(), Float64), r)
+  # @show (N & 0x000000ff) % Int
+  # @show N N & 0x000000ff
+  j = vload(base_exp_table_pointer(), (N & 0x000000ff,))
+  jU = reinterpret(Float64, Base.Math.JU_CONST | (j&Base.Math.JU_MASK))
+  jL = reinterpret(Float64, Base.Math.JL_CONST | (j >> 8))
+  # @show N & 0x000000ff j jU jL
+  # k = N >>> 0x00000008
+  # small_part = reinterpret(UInt64, vfmadd(js, expm1b_kernel(Val{B}(), r), js))
+  very_small = muladd(jU, VectorizationBase.expm1b_kernel(Val{B}(), r), jL)
+  small_part = muladd(jU, xlo, very_small) + jU
+  # small_part = vfmadd(js, expm1b_kernel(Val{B}(), r), js)
+  # return reinterpret(Float64, small_part), r, k, N_float, js
+  res = VectorizationBase.vscalef(small_part, 0.00390625*N_float)
+  # twopk = (k % UInt64) << 0x0000000000000034
+  # res = reinterpret(Float64, twopk + small_part)
+  return res
+end
 
 
 @inline function cbrt_kernel(x::FloatType64)

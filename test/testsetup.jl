@@ -1,5 +1,5 @@
 
-using SLEEFPirates, VectorizationBase, Aqua
+using SLEEFPirates, VectorizationBase
 using VectorizationBase: data
 using Test
 

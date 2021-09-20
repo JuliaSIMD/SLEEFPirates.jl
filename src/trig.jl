@@ -193,33 +193,46 @@ end
 end
 
 @inline function sin_fast(d::FloatType64)
-    T = eltype(d)
-    I = fpinttype(T)
-    t = d
+  T = eltype(d)
+  I = fpinttype(T)
+  t = d
 
-    qh = trunc(d * (T(M_1_PI) / (1 << 24)))
-    ql = round(d * T(M_1_PI) - qh * (1 << 24))
+  qh = trunc(d * (T(M_1_PI) / (1 << 24)))
+  ql = round(d * T(M_1_PI) - qh * (1 << 24))
+  # @show qh, ql
+  # qh = trunc(d * (T(M_1_PI) / (1 << 24)))
+  # ql = round(muladd(d, T(M_1_PI), - qh * (1 << 24)))
+  # @show qh, ql
+  # qhb = trunc(big(d) * (T(M_1_PI) / (1 << 24)))
+  # qlb = round(d * T(M_1_PI) - qhb * (1 << 24))
+  # # qh = Float64(qhb); ql = Float64(qlb)
+  # # qh = (qhb); ql = (qlb)
+  # @show qh, ql
+  
+  d = muladd(qh , -PI_A(T) * (1 << 24) , d)
+  d = muladd(ql , -PI_A(T)             , d)
+  d = muladd(qh , -PI_B(T) * (1 << 24) , d)
+  d = muladd(ql , -PI_B(T)             , d)
+  d = muladd(qh , -PI_C(T) * (1 << 24) , d)
+  d = muladd(ql , -PI_C(T)             , d)
+  d = muladd(muladd(qh, (1 << 24), ql), -PI_D(T), d)
+  # @show d, qh, ql
 
-    d = muladd(qh , -PI_A(T) * (1 << 24) , d)
-    d = muladd(ql , -PI_A(T)             , d)
-    d = muladd(qh , -PI_B(T) * (1 << 24) , d)
-    d = muladd(ql , -PI_B(T)             , d)
-    d = muladd(qh , -PI_C(T) * (1 << 24) , d)
-    d = muladd(ql , -PI_C(T)             , d)
-    d = muladd(qh * (1 << 24) + ql, -PI_D(T), d)
+  # Nd = round(d*inv(π))
+  # d = muladd(-Float64(π), Nd, d)
+  # d = ifelse(isodd(Base.unsafe_trunc(fpinttype(T), Nd)), -d, d)
+  
+  s = d * d
 
-    s = d * d
+  qli = unsafe_trunc(fpinttype(T), ql)
+  d = ifelse(qli & one(I) != zero(I), -d, d)
+  u = sincos_fast_kernel(s)
+  u = muladd(s, u * d, d)
 
-    qli = unsafe_trunc(fpinttype(T), ql)
-    d = ifelse(qli & one(I) != zero(I), -d, d)
+  # u = ifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
+  # u = ifelse((~isinf(t)) & ((abs(t) > TRIG_MAX(T))), T(-0.0), u)
 
-    u = sincos_fast_kernel(s)
-    u = muladd(s, u * d, d)
-
-    # u = ifelse((~isinf(t)) & (isnegzero(t) | (abs(t) > TRIG_MAX(T))), T(-0.0), u)
-    # u = ifelse((~isinf(t)) & ((abs(t) > TRIG_MAX(T))), T(-0.0), u)
-
-    return u
+  return u
 end
 
 @inline function sin_fast(d::FloatType32)

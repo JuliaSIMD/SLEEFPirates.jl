@@ -7,7 +7,7 @@
     xx = nextfloat(SLEEFPirates.VectorizationBase.MIN_EXP(Val(ℯ),T)):T(0.02):prevfloat(SLEEFPirates.VectorizationBase.MAX_EXP(Val(ℯ),T));
     # xx = T == Float32 ? map(T, vcat(-10:0.0002:10, -50:0.1:50)) : map(T, vcat(-10:0.0002:10, -705:0.1:705))
     fun_table = Dict(SLEEFPirates.exp => Base.exp)
-    tol = 2
+    tol = 3
     test_acc(T, fun_table, xx, tol)
 
 
@@ -132,7 +132,8 @@
     xx3 = map(Tuple{T,T}, [(x,y) for x = 2.1, y = -1000:0.1:1000]);
     txx = vcat(xx1, xx2, xx2);
     fun_table = Dict(SLEEFPirates.pow => Base.:^);
-    tol = 1
+    # tol = 1
+    tol = 3
     test_acc(T, fun_table, txx, tol)
 
     xx1 = map(Tuple{T,T}, [(x,y) for x = 0:0.20:100, y = 0.1:0.20:100])[:];
@@ -168,7 +169,7 @@
     xx = nextfloat(SLEEFPirates.VectorizationBase.MIN_EXP(Val(10),T)):T(0.02):prevfloat(SLEEFPirates.VectorizationBase.MAX_EXP(Val(10),T));
     # xx = map(T, vcat(-10:0.0002:10, -35:0.023:1000, -300:0.01:300))
     fun_table = Dict(SLEEFPirates.exp10 => Base.exp10)
-    tol = 2
+    tol = 3
     test_acc(T, fun_table, xx, tol)
 
 
