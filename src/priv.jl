@@ -426,15 +426,19 @@ end
 @inline function logk(d::V) where (V <: FloatType)
   T = eltype(d)
   m, e = splitfloat(d)
-
+  # m = significand(d); e = exponent(d)
   x  = ddiv(dsub2(m, T(1.0)), dadd2(T(1.0), m))
-
+  # @show 
   x2 = dsqu(x)
 
   t  = logk_kernel(x2)
 
-  s = dmul(MDLN2(T), e)
+  s = Double(0.6931471803691238 * e, 1.9082149292705877e-10 * e)
+  # s = dmul(MDLN2(T), e)
+  # @show Float64(s) s
   s = dadd(s, scale(x, T(2.0)))
+  # @show s
   s = dadd(s, dmul(dmul(x2, x), t))
+  # @show s
   return s
 end
