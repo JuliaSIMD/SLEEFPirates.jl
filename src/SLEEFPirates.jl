@@ -12,7 +12,9 @@ using VectorizationBase: vzero, AbstractSIMD, _Vec, fma_fast, data, VecUnroll, N
 
 import IfElse: ifelse
 
-export Vec, sigmoid_fast, tanh_fast#, loggamma
+export Vec, sigmoid_fast, tanh_fast,
+  PReLu, gelu, softplus, silu, Elu
+  #, loggamma
 
 const FloatType64 = Union{Float64,AbstractSIMD{<:Any,Float64}}
 const FloatType32 = Union{Float32,AbstractSIMD{<:Any,Float32}}
@@ -118,6 +120,7 @@ include("log.jl")    # logarithmic functions
 include("trig.jl")   # trigonometric and inverse trigonometric functions
 include("hyp.jl")    # hyperbolic and inverse hyperbolic functions
 include("misc.jl")   # miscallenous math functions including pow and cbrt
+include("rectifier.jl")
 # if Int === Int64
 #     if isfile(joinpath(@__DIR__, "svmlwrap.jl"))
 #         include("svmlwrap.jl")
