@@ -52,7 +52,7 @@ end
     r = vfmadd(N_float, Ln2L(T), r)
     hi, lo = expm1_kernel(r)
     small_part = r*hi
-    small_round = fma(r, lo, fma(r, hi, -small_part))
+    small_round = vfmadd(r, lo, vfmadd(r, hi, -small_part))
     twopk = reinterpret(T, ((N%uinttype(T)) + uinttype(T)(exponent_bias(T))) << uinttype(T)(significand_bits(T)))
     
     # if !(abs(x)<=MIN_EXPM1(T))
@@ -63,7 +63,7 @@ end
     #         return vfmadd(small_part, T(2), T(2)) * T(2)^(exponent_max(T)-1)
     #     end
     # end
-    res = fma(twopk, small_round, fma(twopk, small_part, twopk-one(T)))
+    res = vfmadd(twopk, small_round, vfmadd(twopk, small_part, twopk-one(T)))
     return res
 end
 @inline function expm1(x::FloatType)
