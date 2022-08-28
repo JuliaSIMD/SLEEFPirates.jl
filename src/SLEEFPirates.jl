@@ -237,7 +237,7 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
   x2 = abs2(x)
   n = evalpoly(x2, (1.0f0, 0.1346604f0, 0.0035974074f0, 2.2332108f-5, 1.587199f-8))
   d = evalpoly(x2, (1.0f0, 0.4679937f0, 0.026262015f0, 0.0003453992f0, 8.7767893f-7))
-  ifelse(x2 < 66f0, x * Base.FastMath.div_fast(n, d), sign(x))
+  ifelse(x2 < 66f0, @fastmath(x * (n / d)), sign(x))
 end
 @inline function tanh_fast(x)
   exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
