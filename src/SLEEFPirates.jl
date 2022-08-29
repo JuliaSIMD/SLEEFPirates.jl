@@ -235,8 +235,14 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
   # stolen from https://github.com/FluxML/NNlib.jl/pull/345
   # https://github.com/FluxML/NNlib.jl/blob/5dd04df4e95f9f9b70d6232fac546f3e98899fc2/src/activations.jl#L766-L773
   x2 = abs2(x)
-  n = evalpoly(x2, (1.0f0, 0.1346604f0, 0.0035974074f0, 2.2332108f-5, 1.587199f-8))
-  d = evalpoly(x2, (1.0f0, 0.4679937f0, 0.026262015f0, 0.0003453992f0, 8.7767893f-7))
+  n0 = muladd(1.587199f-8, x2, 2.2332108f-5)
+  d0 = muladd(8.7767893f-7, x2, 0.0003453992f0)
+  n1 = muladd(n0, x2, 0.0035974074f0)
+  d1 = muladd(d0, x2, 0.026262015f0)
+  n2 = muladd(n1, x2, 0.1346604f0)
+  d2 = muladd(d1, x2, 0.4679937f0)
+  n = muladd(n2, x2, 1.0f0)
+  d = muladd(d2, x2, 1.0f0)
   ifelse(x2 < 66f0, @fastmath(x * (n / d)), sign(x))
 end
 @inline function tanh_fast(x)
