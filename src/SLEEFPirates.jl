@@ -163,8 +163,8 @@ for func in (:sin, :cos, :tan, :asin, :acos, :atan, :sinh, :cosh, :tanh,
              :sin_fast, :cos_fast, :tan_fast, :asin_fast, :acos_fast, :atan_fast,# :atan2_fast,
              :log_fast, :log2_fast, :log10_fast, :cbrt_fast)#, :exp, :exp2, :exp10
   @eval begin
-    $func(a::Float16) = Float16.($func(Float32(a)))
-    $func(x::Real) = $func(float(x))
+    @inline $func(a::Float16) = Float16.($func(Float32(a)))
+    @inline $func(x::Real) = $func(float(x))
     @inline $func(v::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v))
     @inline $func(i::MM) = $func(Vec(i))
     @inline $func(v::VecUnroll{N,1,T,T}) where {N,T} = to_vecunrollscalar($func(VectorizationBase.transpose_vecunroll(v)), StaticInt{N}())
@@ -205,22 +205,22 @@ end
 @inline Base.FastMath.atan_fast(a::T, b::T) where {T<:AbstractSIMD} = atan_fast(a, b)
 @inline Base.FastMath.atan_fast(a::AbstractSIMD, b::AbstractSIMD) = ((c,d) = promote(a,b); atan_fast(c, d))
 for func in (:atan, :hypot, :pow)
-    func2 = func === :pow ? :^ : func
-    ptyp = func === :pow ? :FloatingTypes : :NativeTypes
-    @eval begin
-        $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
-        $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
-        # @inline Base.$func2(x::AbstractSIMD{W,T}, y::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, Vec(y))
-        # @inline Base.$func2(x::Vec{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
-        @inline Base.$func2(x::AbstractSIMD{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, convert(Vec{W,T}, y))
-        @inline Base.$func2(x::T, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(convert(Vec{W,T}, x), y)
-        @inline Base.$func2(x::AbstractSIMD{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2<:$ptyp} = $func(x, convert(Vec{W,T1}, y))
-        @inline Base.$func2(x::T2, y::AbstractSIMD{W,T1}) where {W,T1<:Union{Float32,Float64},T2<:NativeTypes} = $func(convert(Vec{W,T1}, x), y)
-        @inline Base.$func2(x::AbstractSIMD{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
-        @inline $func(v1::AbstractSIMD{W,I}, v2::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v1), float(v2))
-    end
+  func2 = func === :pow ? :^ : func
+  ptyp = func === :pow ? :FloatingTypes : :NativeTypes
+  @eval begin
+    @inline $func(y::Real, x::Real) = $func(promote(float(y), float(x))...)
+    @inline $func(a::Float16, b::Float16) = Float16($func(Float32(a), Float32(b)))
+    # @inline Base.$func2(x::AbstractSIMD{W,T}, y::Vec{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, Vec(y))
+    # @inline Base.$func2(x::Vec{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(Vec(x), y)
+    @inline Base.$func2(x::AbstractSIMD{W,T}, y::T) where {W,T<:Union{Float32,Float64}} = $func(x, convert(Vec{W,T}, y))
+    @inline Base.$func2(x::T, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(convert(Vec{W,T}, x), y)
+    @inline Base.$func2(x::AbstractSIMD{W,T1}, y::T2) where {W,T1<:Union{Float32,Float64},T2<:$ptyp} = $func(x, convert(Vec{W,T1}, y))
+    @inline Base.$func2(x::T2, y::AbstractSIMD{W,T1}) where {W,T1<:Union{Float32,Float64},T2<:NativeTypes} = $func(convert(Vec{W,T1}, x), y)
+    @inline Base.$func2(x::AbstractSIMD{W,T}, y::AbstractSIMD{W,T}) where {W,T<:Union{Float32,Float64}} = $func(x, y)
+    @inline $func(v1::AbstractSIMD{W,I}, v2::AbstractSIMD{W,I}) where {W,I<:Integer} = $func(float(v1), float(v2))
+  end
 end
-ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
+@inline ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 
 # @inline logit(x) = log(Base.FastMath.div_fast(x,Base.FastMath.sub_fast(one(x),x)))
 # @inline invlogit(x) = Base.FastMath.inv_fast(Base.FastMath.add_fast(one(x), exp(Base.FastMath.sub_fast(x))))
@@ -231,7 +231,7 @@ ldexp(x::Float16, q::Int) = Float16(ldexpk(Float32(x), q))
 max_tanh(::Type{Float64}) = 19.06154746539849599509609553228539867418786340504817671278462587964799037885145
 max_tanh(::Type{Float32}) = 9.010913339828708369989037671244720498805572920317272822795576296065428827978905f0
 
-@inline function tanh_fast(x::AbstractSIMD{W,Float32}) where {W}
+@inline function tanh_fast(x::Union{Float32,AbstractSIMD{<:Any,Float32}})
   # stolen from https://github.com/FluxML/NNlib.jl/pull/345
   # https://github.com/FluxML/NNlib.jl/blob/5dd04df4e95f9f9b70d6232fac546f3e98899fc2/src/activations.jl#L766-L773
   x2 = abs2(x)
@@ -245,7 +245,7 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
   d = muladd(d2, x2, 1.0f0)
   ifelse(x2 < 66f0, @fastmath(x * (n / d)), sign(x))
 end
-@inline function tanh_fast(x::AbstractSIMD{W,Float64}) where {W}
+@inline function tanh_fast(x::Union{Float64,AbstractSIMD{<:Any,Float64}})
   exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
   # Division is faster than approximate inversion in
   # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
@@ -254,6 +254,12 @@ end
 end
 @inline tanh_fast(x::IntegerType) = tanh_fast(float(x))
 @inline Base.FastMath.tanh_fast(x::AbstractSIMD) = tanh_fast(x)
+@inline function Base.:(^)(
+  x::AbstractSIMD{W,<:Base.BitInteger},
+  y::AbstractSIMD{W,<:Base.BitInteger}
+) where {W}
+  float(x) ^ y
+end
 # sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462
 # sigmoid_max(::Type{Float32}) = 17.3286794841963099036462718631317335849086302638474573162299687307067828965093f0
 

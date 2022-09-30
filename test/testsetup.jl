@@ -145,6 +145,15 @@ function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.St
     @test maximum(countulp.(t1, t2)) ≤ tol
     @test maximum(countulp.(tu1, tu2)) ≤ tol
   end
+  vui = round(SLEEFPirates.inttype(T), vu);
+  tu3 = tovector(xfun(vui));
+  tu4 = tovector(xfun(float(vui)));
+  @test maximum(countulp.(tu3, tu4)) ≤ tol
+  vxi = round(SLEEFPirates.inttype(T), vxes1);
+  tx3 = tovector(xfun(vxi));
+  tx4 = tovector(xfun(float(vxi)));
+  @test maximum(countulp.(tx3, tx4)) ≤ tol
+  nothing
 end
 vbig(x) = big.(x)
 function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.StaticInt{W}}, xf::NTuple{N,T}, xl::NTuple{N,T}, tol, broken::Bool) where {W,N,T}
@@ -190,6 +199,15 @@ function test_vector(xfun, fun, ::Union{Val{W},SLEEFPirates.VectorizationBase.St
   else
     @test_broken maximum(countulp.(tu1, tu2)) ≤ tol
   end
+  vui = map(Base.Fix1(round,SLEEFPirates.inttype(T)), vu);
+  tu3 = tovector(xfun(vui...));
+  tu4 = tovector(xfun(map(float,vui)...));
+  @test maximum(countulp.(tu3, tu4)) ≤ tol
+  vxi = map(Base.Fix1(round,SLEEFPirates.inttype(T)), vxes1);
+  tx3 = tovector(xfun(vxi...));
+  tx4 = tovector(xfun(map(float,vxi)...));
+  @test maximum(countulp.(tx3, tx4)) ≤ tol
+  nothing
 end
 function test_function_acc(::Type{T}, xfun::F1, fun::F2, xx, tol, debug, tol_debug, broken) where {T,F1,F2}
   rmax = 0.0

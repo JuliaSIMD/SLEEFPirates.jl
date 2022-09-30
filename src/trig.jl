@@ -191,7 +191,6 @@ end
     c1 = -0.166666597127914428710938f0
     return evalpoly(x, (c1, c2, c3, c4))
 end
-
 @inline function sin_fast(d::FloatType64)
   T = eltype(d)
   I = fpinttype(T)
@@ -234,7 +233,8 @@ end
 
   return u
 end
-
+@inline sincos(x::IntegerType) = sincos(float(x))
+@inline sincos_fast(x::IntegerType) = sincos_fast(float(x))
 @inline function sin_fast(d::FloatType32)
     T = eltype(d)
     I = fpinttype(T)
@@ -904,7 +904,7 @@ Compute the inverse tangent of `x/y`, using the signs of both `x` and `y` to det
     # return ifelse(isnan(y) | isnan(x), T(NaN), flipsign(r, x))
     flipsign(r, x)
 end
-
+@inline atan_fast(a, b) = atan_fast(float(a), float(b))
 
 
 """
