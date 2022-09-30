@@ -74,4 +74,6 @@ end
     res = ifelse(isnan(x), x, res)
     return res
 end
+@inline expm1_fast(x::IntegerType) = expm1_fast(float(x))
+
 
