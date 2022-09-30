@@ -245,13 +245,14 @@ max_tanh(::Type{Float32}) = 9.01091333982870836998903767124472049880557292031727
   d = muladd(d2, x2, 1.0f0)
   ifelse(x2 < 66f0, @fastmath(x * (n / d)), sign(x))
 end
-@inline function tanh_fast(x)
+@inline function tanh_fast(x::AbstractSIMD{W,Float64}) where {W}
   exp2xm1 = expm1_fast(Base.FastMath.add_fast(x, x))
   # Division is faster than approximate inversion in
   # t = Base.FastMath.mul_fast(exp2xm1, Base.FastMath.inv_fast(Base.FastMath.add_fast(exp2xm1, typeof(x)(2))))
   t = Base.FastMath.div_fast(exp2xm1, Base.FastMath.add_fast(exp2xm1, typeof(x)(2)))
   ifelse(abs(x) > max_tanh(eltype(x)), copysign(one(x), x), t)
 end
+@inline tanh_fast(x::IntegerType) = tanh_fast(float(x))
 @inline Base.FastMath.tanh_fast(x::AbstractSIMD) = tanh_fast(x)
 # sigmoid_max(::Type{Float64}) = 36.42994775023704665301938332748370611415146834112402863375388447785857586583462
 # sigmoid_max(::Type{Float32}) = 17.3286794841963099036462718631317335849086302638474573162299687307067828965093f0
