@@ -31,6 +31,15 @@ function runtests()
   @test tovector(@fastmath(atan(vx,vy))) ≈ atan.(x,y)
   @test tovector(@fastmath(atan(0.7,vy))) ≈ atan.(0.7,y)
   @test tovector(@fastmath(atan(vx,0.8))) ≈ atan.(x,0.8)
+
+  vxi32 = Vec(ntuple(_ -> rand(Int32(-5):Int32(5)), pick_vector_width(Int32))...)
+  vxi64 = Vec(ntuple(_ -> rand(Int64(-5):Int64(5)), pick_vector_width(Int64))...)
+  vxf32 = float(vxi32)
+  vxf64 = float(vxi64)
+  for f ∈ [SLEEFPirates.tanh_fast, SLEEFPirates.sigmoid_fast, SLEEFPirates.PReLu(0.3f0), SLEEFPirates.Φ, SLEEFPirates.gelu, SLEEFPirates.softplus, SLEEFPirates.silu, SLEEFPirates.Elu(0.4f0)]
+    @test VectorizationBase.vall(f(vxi32) == f(vxf32))
+    @test VectorizationBase.vall(f(vxi64) == f(vxf64))
+  end
 end
 
 runtests()
