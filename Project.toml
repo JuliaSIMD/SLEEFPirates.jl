@@ -1,7 +1,7 @@
 name = "SLEEFPirates"
 uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
 authors = ["chriselrod <elrodc@gmail.com>"]
-version = "0.6.37"
+version = "0.6.38"
 
 [deps]
 IfElse = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
