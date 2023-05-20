@@ -2,76 +2,68 @@ using VectorizationBase: REGISTER_SIZE
 using Libdl
 
 function try_to_find_libmvec()
-    Sys.islinux() || return ""
-    libnames = [
-        "libmvec.so"
-    ]
-    paths = [
-        "/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"
-    ]
-    find_library(libnames, paths)
+  Sys.islinux() || return ""
+  libnames = ["libmvec.so"]
+  paths = ["/usr/lib64/", "/usr/lib", "/lib/x86_64-linux-gnu"]
+  find_library(libnames, paths)
 end
 
 function create_svmlwrap_file(mveclib)
-    mveclib == "" && return mveclib
-    lib = dlopen(mveclib)
-    file = ["const MVECLIB = \"$mveclib\""]
-    sizes = [(:b,16),(:d,32),(:e,64)]
-    for f ∈ [:sin, :cos, :log]
-        for (l,s) ∈ sizes
-            s > REGISTER_SIZE && continue
-            for isdouble ∈ (true,false)
-                # isdouble && f === :log && s == 64 && continue # skip log on avx512, to prefer use sleef version.
-                ts = s >> (2 + isdouble)
-                func = Symbol(:_ZGV, l, :N, ts, :v_, f, isdouble ? Symbol("") : :f)
-                if VERSION >= v"1.1"
-                    sym = dlsym(lib, func, throw_error = false)
-                else
-                    sym = dlsym_e(lib, func)
-                end
-                if sym != C_NULL
-                    typ = "Float$(isdouble ? 64 : 32)"
-                    vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
-                    svtyp = "Vec{$ts,$typ}"
-                    def1 = "@inline $f(v::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,), v)"
-                    def2 = "@inline Base.$f(v::$svtyp) = Vec($f(data(v)))"
-                    push!(file, def1)
-                    push!(file, def2)
-                end
-            end
+  mveclib == "" && return mveclib
+  lib = dlopen(mveclib)
+  file = ["const MVECLIB = \"$mveclib\""]
+  sizes = [(:b, 16), (:d, 32), (:e, 64)]
+  for f ∈ [:sin, :cos, :log]
+    for (l, s) ∈ sizes
+      s > REGISTER_SIZE && continue
+      for isdouble ∈ (true, false)
+        # isdouble && f === :log && s == 64 && continue # skip log on avx512, to prefer use sleef version.
+        ts = s >> (2 + isdouble)
+        func = Symbol(:_ZGV, l, :N, ts, :v_, f, isdouble ? Symbol("") : :f)
+        if VERSION >= v"1.1"
+          sym = dlsym(lib, func, throw_error = false)
+        else
+          sym = dlsym_e(lib, func)
         end
+        if sym != C_NULL
+          typ = "Float$(isdouble ? 64 : 32)"
+          vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
+          svtyp = "Vec{$ts,$typ}"
+          def1 = "@inline $f(v::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,), v)"
+          def2 = "@inline Base.$f(v::$svtyp) = Vec($f(data(v)))"
+          push!(file, def1)
+          push!(file, def2)
+        end
+      end
     end
-    let f = :pow, sf = :^
-        for (l,s) ∈ sizes
-            if s ≤ REGISTER_SIZE
-                for isdouble ∈ (true,false)
-                    ts = s >> (2 + isdouble)
-                    func = Symbol(:_ZGV, l, :N, ts, :vv_, f, isdouble ? Symbol("") : :f)
-                    if VERSION >= v"1.1"
-                        sym = dlsym(lib, func, throw_error = false)
-                    else
-                        sym = dlsym_e(lib, func)
-                    end
-                    if sym != C_NULL
-                        typ = "Float$(isdouble ? 64 : 32)"
-                        vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
-                        svtyp = "Vec{$ts,$typ}"
-                        def1 = "@inline $f(v1::$vtyp, v2::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,$vtyp), v1, v2)"
-                        def2 = "@inline Base.:($sf)(v1::$svtyp, v2::$svtyp) = Vec($f(data(v1),data(v2)))"
-                        push!(file, def1)
-                        push!(file, def2)
-                    end
-                end
-            end
-        end        
+  end
+  let f = :pow, sf = :^
+    for (l, s) ∈ sizes
+      if s ≤ REGISTER_SIZE
+        for isdouble ∈ (true, false)
+          ts = s >> (2 + isdouble)
+          func = Symbol(:_ZGV, l, :N, ts, :vv_, f, isdouble ? Symbol("") : :f)
+          if VERSION >= v"1.1"
+            sym = dlsym(lib, func, throw_error = false)
+          else
+            sym = dlsym_e(lib, func)
+          end
+          if sym != C_NULL
+            typ = "Float$(isdouble ? 64 : 32)"
+            vtyp = "NTuple{$ts,Core.VecElement{$typ}}"
+            svtyp = "Vec{$ts,$typ}"
+            def1 = "@inline $f(v1::$vtyp, v2::$vtyp) = ccall((:$func,MVECLIB), $vtyp, ($vtyp,$vtyp), v1, v2)"
+            def2 = "@inline Base.:($sf)(v1::$svtyp, v2::$svtyp) = Vec($f(data(v1),data(v2)))"
+            push!(file, def1)
+            push!(file, def2)
+          end
+        end
+      end
     end
-    join(file, "\n")
+  end
+  join(file, "\n")
 end
 
 open(joinpath(@__DIR__, "..", "src", "svmlwrap.jl"), "w") do f
-    write(f, create_svmlwrap_file(try_to_find_libmvec()))
+  write(f, create_svmlwrap_file(try_to_find_libmvec()))
 end
-
-
-
-

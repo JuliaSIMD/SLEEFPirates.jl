@@ -23,12 +23,14 @@
 # @inline _sign(d::T) where {T<:FloatType} = flipsign(one(T), d)
 @inline _sign(d::T) where {T<:FloatType} = ifelse(d > 0, one(T), -one(T))
 
-@inline integer2float(::Type{Float64}, m::Int64) = reinterpret(Float64, m << significand_bits(Float64))
+@inline integer2float(::Type{Float64}, m::Int64) =
+  reinterpret(Float64, m << significand_bits(Float64))
 # @inline integer2float(::Type{Float32}, m::Union{Int32,Int64}) = reinterpret(Float32, (m % Int32) << Int32(significand_bits(Float32)))
-@inline integer2float(::Type{Float32}, m::Base.BitInteger) = reinterpret(Float32, (m % Int32) << (significand_bits(Float32) % Int32))
+@inline integer2float(::Type{Float32}, m::Base.BitInteger) =
+  reinterpret(Float32, (m % Int32) << (significand_bits(Float32) % Int32))
 
 @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int32}) where {W}
-    reinterpret(Float64, (m % Int64) << (significand_bits(Float64) % Int64))
+  reinterpret(Float64, (m % Int64) << (significand_bits(Float64) % Int64))
 end
 
 @static if Int === Int64
@@ -36,7 +38,8 @@ end
     reinterpret(Float64, m << significand_bits(Float64))
   end
 else
-  @inline integer2float(::Type{Float64}, m::Int32) = reinterpret(Float64, (m % Int64) << significand_bits(Float64))
+  @inline integer2float(::Type{Float64}, m::Int32) =
+    reinterpret(Float64, (m % Int64) << significand_bits(Float64))
   @inline function integer2float(::Type{Float64}, m::AbstractSIMD{W,Int64}) where {W}
     reinterpret(Float64, m << (significand_bits(Float64) % Int64))
   end
@@ -45,21 +48,22 @@ end
   (reinterpret(Int64, d) >> significand_bits(Float64))
 end
 @inline function integer2float(::Type{Float32}, m::AbstractSIMD{W,<:Integer}) where {W}
-    reinterpret(Vec{W,Float32}, (m % Int32) << (significand_bits(Float32)) % Int32)
+  reinterpret(Vec{W,Float32}, (m % Int32) << (significand_bits(Float32)) % Int32)
 end
 
-@inline float2integer(d::Float64) = (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
-@inline float2integer(d::Float32) = (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
+@inline float2integer(d::Float64) =
+  (reinterpret(Int64, d) >> significand_bits(Float64)) % Int
+@inline float2integer(d::Float32) =
+  (reinterpret(Int32, d) >> significand_bits(Float32)) % Int32
 
 @inline function float2integer(d::AbstractSIMD{W,Float32}) where {W}
-    (reinterpret(Int32, d) >> (significand_bits(Float32) % Int32))
+  (reinterpret(Int32, d) >> (significand_bits(Float32) % Int32))
 end
 
 @inline function pow2i(::Type{T}, q::I) where {T<:Union{Float32,Float64},I<:IntegerType}
-    integer2float(T, q + I(exponent_bias(T)))
+  integer2float(T, q + I(exponent_bias(T)))
 end
 
 # sqrt without the domain checks which we don't need since we handle the checks ourselves
 @inline _sqrt(x::T) where {T<:Union{Float32,Float64}} = Base.sqrt_llvm(x)
 @inline _sqrt(x) = sqrt(x)
-

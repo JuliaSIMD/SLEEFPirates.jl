@@ -68,43 +68,53 @@
 @inline evalpoly(x, p::Tuple{T1}) where {T1} = only(p)
 @inline evalpoly(x, p::Tuple{T1,T2}) where {T1,T2} = muladd(p[2], x, p[1])
 @generated function frontnp1(x::Tuple, y, ::Val{N}) where {N}
-  t = Expr(:tuple); gf = GlobalRef(Core,:getfield)
+  t = Expr(:tuple)
+  gf = GlobalRef(Core, :getfield)
   for n ∈ 1:N+1
     push!(t.args, Expr(:call, gf, :x, n, false))
   end
   push!(t.args, :y)
-  Expr(:block, Expr(:meta,:inline), t)
+  Expr(:block, Expr(:meta, :inline), t)
 end
-@inline evalpoly(x, p::Tuple{T1,T2,T3,Vararg{Any,N}}) where {T1,T2,T3,N} = evalpoly(x, frontnp1(p, muladd(p[end], x, p[end-1]), Val(N)))
+@inline evalpoly(x, p::Tuple{T1,T2,T3,Vararg{Any,N}}) where {T1,T2,T3,N} =
+  evalpoly(x, frontnp1(p, muladd(p[end], x, p[end-1]), Val(N)))
 
 @inline estrin(x::VecUnroll, p::NTuple{N}) where {N} = evalpoly(x, p)
-@inline estrin(x, p::Tuple{Vararg{Any,N}}) where {N} = estrin(x, p, StaticInt{N}() & StaticInt{3}(), lt(StaticInt{N}(), StaticInt(7)))
+@inline estrin(x, p::Tuple{Vararg{Any,N}}) where {N} =
+  estrin(x, p, StaticInt{N}() & StaticInt{3}(), lt(StaticInt{N}(), StaticInt(7)))
 @inline estrin(x, p, r, ::True) = evalpoly(x, p)
 @inline function estrin(x, p::Tuple{Vararg{Any,N}}, ::StaticInt{0}, ::False) where {N}
   x2 = Base.FastMath.mul_fast(x, x)
   x4 = Base.FastMath.mul_fast(x2, x2)
   res = muladd(x2, muladd(x, p[end], p[end-1]), muladd(x, p[end-2], p[end-3]))
-  return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N-4)))
+  return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N - 4)))
 end
 @generated function _slice_end(x::Tuple, ::Val{R}, ::Val{N}) where {R,N}
-  t = Expr(:tuple); gf = GlobalRef(Core,:getfield)
+  t = Expr(:tuple)
+  gf = GlobalRef(Core, :getfield)
   for n ∈ N-R+1:N
     push!(t.args, Expr(:call, gf, :x, n, false))
   end
-  Expr(:block, Expr(:meta,:inline), t)
+  Expr(:block, Expr(:meta, :inline), t)
 end
 @inline function estrin(x, p::Tuple{Vararg{Any,N}}, ::StaticInt{R}, ::False) where {N,R}
   x2 = Base.FastMath.mul_fast(x, x)
   x4 = Base.FastMath.mul_fast(x2, x2)
   res = evalpoly(x, _slice_end(p, Val(R), Val(N)))
-  return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N-R)))
+  return _estrin(x, x2, x4, res, ntuple(n -> p[n], Val(N - R)))
 end
 @inline function __estrin(x, x2, x4, ex, p1, p2, p3, p4)
-    part = muladd(x2, muladd(x, p4, p3), muladd(x, p2, p1))
-    muladd(x4, ex, part)
+  part = muladd(x2, muladd(x, p4, p3), muladd(x, p2, p1))
+  muladd(x4, ex, part)
 end
 @inline _estrin(x, x2, x4, ex, p::Tuple{}) = ex
-@inline function _estrin(x, x2, x4, ex, p::Tuple{T1,T2,T3,T4,Vararg{Any,N}}) where {T1,T2,T3,T4,N}
+@inline function _estrin(
+  x,
+  x2,
+  x4,
+  ex,
+  p::Tuple{T1,T2,T3,T4,Vararg{Any,N}},
+) where {T1,T2,T3,T4,N}
   ex = _estrin(x, x2, x4, ex, ntuple(n -> p[n+4], Val(N)))
   __estrin(x, x2, x4, ex, p[1], p[2], p[3], p[4])
 end
@@ -113,31 +123,29 @@ end
 # OscardSmith
 # https://github.com/JuliaLang/julia/blob/3253fb5a60ad841965eb6bd218921d55101c0842/base/special/expm1.jl
 @generated function exthorner(x, p::Tuple{Vararg{Any,N}}) where {N}
-    # polynomial evaluation using compensated summation.
-    # much more accurate, especially when lo can be combined with other rounding errors
-    hi_old = Symbol(:hi_, N)
-    q = Expr(:block, :($hi_old = p[$N]))
-    lo_old = hi_old
-    for n in N-1:-1:1
-        pₙ = Symbol(:p_,n)
-        prodₙ = Symbol(:prod_,n)
-        errₙ = Symbol(:err_,n)
-        hi = Symbol(:hi_,n)
-        lo = Symbol(:lo_,n)
-        push!(q.args, :($pₙ = p[$n]))
-        push!(q.args, :($prodₙ = $hi_old*x))
-        push!(q.args, :($errₙ = vfmadd($hi_old, x, -$prodₙ)))
-        push!(q.args, :($hi = $pₙ + $prodₙ))
-        if lo_old === hi_old
-            push!(q.args, :($lo = $prodₙ - ($hi - $pₙ) + $errₙ))
-        else
-            push!(q.args, :($lo = vfmadd($lo_old, x, $prodₙ - ($hi - $pₙ) + $errₙ)))
-        end
-        hi_old = hi
-        lo_old = lo
+  # polynomial evaluation using compensated summation.
+  # much more accurate, especially when lo can be combined with other rounding errors
+  hi_old = Symbol(:hi_, N)
+  q = Expr(:block, :($hi_old = p[$N]))
+  lo_old = hi_old
+  for n = N-1:-1:1
+    pₙ = Symbol(:p_, n)
+    prodₙ = Symbol(:prod_, n)
+    errₙ = Symbol(:err_, n)
+    hi = Symbol(:hi_, n)
+    lo = Symbol(:lo_, n)
+    push!(q.args, :($pₙ = p[$n]))
+    push!(q.args, :($prodₙ = $hi_old * x))
+    push!(q.args, :($errₙ = vfmadd($hi_old, x, -$prodₙ)))
+    push!(q.args, :($hi = $pₙ + $prodₙ))
+    if lo_old === hi_old
+      push!(q.args, :($lo = $prodₙ - ($hi - $pₙ) + $errₙ))
+    else
+      push!(q.args, :($lo = vfmadd($lo_old, x, $prodₙ - ($hi - $pₙ) + $errₙ)))
     end
-    push!(q.args, Expr(:tuple, hi_old, lo_old))
-    Expr(:block, Expr(:meta, :inline), q)
+    hi_old = hi
+    lo_old = lo
+  end
+  push!(q.args, Expr(:tuple, hi_old, lo_old))
+  Expr(:block, Expr(:meta, :inline), q)
 end
-
-
