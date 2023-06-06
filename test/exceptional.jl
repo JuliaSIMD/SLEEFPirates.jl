@@ -252,7 +252,7 @@ fun_table = Dict(SLEEFPirates.cos_fast => Base.cos, SLEEFPirates.cos => Base.cos
 end
 
 
-@testset "exceptional sin in $xsincos"for xsincos in (SLEEFPirates.sincos_fast, SLEEFPirates.sincos)
+@testset "exceptional sin in $xsincos" for xsincos in (SLEEFPirates.sincos_fast, SLEEFPirates.sincos)
     xa = T[NaN, -0.0, 0.0, Inf, -Inf]
     for x in xa
         q = xsincos(x)[1]
@@ -261,7 +261,7 @@ end
 end
 
 
-@testset "exceptional cos in $xsincos"for xsincos in (SLEEFPirates.sincos_fast, SLEEFPirates.sincos)
+@testset "exceptional cos in $xsincos" for xsincos in (SLEEFPirates.sincos_fast, SLEEFPirates.sincos)
     xa = T[NaN, -0.0, 0.0, Inf, -Inf]
     for x in xa
         q = xsincos(x)[2]
