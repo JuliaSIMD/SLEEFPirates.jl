@@ -260,10 +260,11 @@ if VERSION ≥ v"1.6"
 end
 @inline sincospi_fast(v::AbstractSIMD{W,T}) where {W,T} = sincos_fast(T(π) * v)
 @inline sincospi_fast(v::Vec{W,T}) where {W,T} = sincos_fast(T(π) * v)
-@inline tanh(x::Vec{W, T}) where {W,T<:VectorizationBase.IntegerTypesHW} = sincosh(float(x))
-@inline sinh(x::Vec{W, T}) where {W,T<:VectorizationBase.IntegerTypesHW} = sincosh(float(x))
-@inline cosh(x::Vec{W, T}) where {W,T<:VectorizationBase.IntegerTypesHW} = sincosh(float(x))
-@inline sincosh(x::Vec{W, T}) where {W,T<:VectorizationBase.IntegerTypesHW} = sincosh(float(x))
+@inline tanh(x::IntegerType) = tanh(float(x))
+@inline sinh(x::IntegerType) = sinh(float(x))
+@inline cosh(x::IntegerType) = cosh(float(x))
+@inline sincosh(x::IntegerType) = sincosh(float(x))
+
 
 for func in (:sinh, :cosh, :tanh, :asinh, :acosh, :atanh, :log1p, :expm1)#, :exp, :exp2, :exp10
   @eval begin

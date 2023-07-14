@@ -1,6 +1,5 @@
 
 using SLEEFPirates, VectorizationBase
-using VectorizationBase: data
 using Test
 
 using Base.Math: significand_bits
@@ -121,7 +120,7 @@ function tovector(u::VectorizationBase.VecUnroll{_N,W,T}) where {_N,W,T}
   i = 0
   x = Vector{T}(undef, N * W)
   for n ∈ 1:N
-    v = data(u)[n]
+    v = VectorizationBase.data(u)[n]
     for w ∈ 0:W-1
       x[(i+=1)] = VectorizationBase.extractelement(v, w)
     end
