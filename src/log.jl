@@ -275,13 +275,17 @@ the natural expoenential function `exp(x)`
   e = ilogb2k(d * T(1.0 / 0.75))
   m = ldexp3k(d, -e)
   e = ifelse(o, e - I(64), e)
-  # @show m e
   x = (m - one(m)) / (m + one(m))
   x2 = x * x
 
   t = log_fast_kernel(Val{BASE}(), x2)
 
-  x = muladd(x, t, invlog2(Val{BASE}(), T) * e)
+  il2 = invlog2(Val{Base}())
+  if il2 === One()
+    x = muladd(x, t, e)
+  else
+    x = muladd(x, t, il2 * e)
+  end
 
   x = ifelse(isinf(d), T(Inf), x)
   x = ifelse((d < zero(I)) | isnan(d), T(NaN), x)
@@ -323,7 +327,12 @@ end
 ) where {W,T<:Union{Float32,Float64},BASE}
   m = VectorizationBase.vgetmant(d) # m ∈ (0.75,1.5)
   e = VectorizationBase.vgetexp(T(1.3333333333333333) * d)
-  en = invlog2(Val{BASE}(), T) * e
+  il2 = invlog2(Val{BASE}(), T)
+  if il2 === One()
+    en = T(e)
+  else
+    en = il2 * e
+  end
   # x  = (m - one(m)) / (m + one(m))
   x = @fastmath (m - one(m)) / (m + one(m))
   x2 = x * x
