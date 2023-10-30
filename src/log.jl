@@ -280,7 +280,7 @@ the natural expoenential function `exp(x)`
 
   t = log_fast_kernel(Val{BASE}(), x2)
 
-  il2 = invlog2(Val{Base}())
+  il2 = invlog2(Val{BASE}())
   if il2 === One()
     x = muladd(x, t, e)
   else
