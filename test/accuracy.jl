@@ -171,7 +171,8 @@
   xx1 = map(Tuple{T,T}, [(x, y) for x = 0:0.20:100, y = 0.1:0.20:100])[:]
   xx2 = map(Tuple{T,T}, [(x, y) for x = 0:0.21:100, y = 0.1:0.22:100])[:]
   xx3 = map(Tuple{T,T}, [(x, y) for x in 2.1, y = -1000:0.1:1000])
-  txx = vcat(xx1, xx2, xx2)
+  # `xx3` sweeps results across the overflow, underflow and subnormal ranges.
+  txx = vcat(xx1, xx2, xx3)
   fun_table = Dict(SLEEFPirates.pow => Base.:^)
   # The scalar `pow` test sweeps the full input grid and stays at
   # ≤ 2.10 ULP, well within `tol = 3`. The internal vector-path
@@ -188,6 +189,24 @@
   # tolerance on aarch64 here to cover the worst-observed M1 value.
   tol = Sys.ARCH === :aarch64 ? 200 : 3
   test_acc(T, fun_table, txx, tol)
+
+  # Results outside the normal range (#58): overflow to `Inf`, underflow to
+  # zero, and correctly rounded subnormals, on both the scalar and SIMD paths.
+  @testset "pow out of normal range" begin
+    edge = T === Float64 ?
+      [(10.0, -308.0), (10.0, -310.0), (2.0, -1023.0), (2.0, -1074.0), (2.0, -1075.0),
+       (10.0, -330.0), (10.0, 309.0), (2.0, 1025.0), (1e300, 2.0), (1e-300, 1e10),
+       (1e300, 1e10), (2.1, -957.0), (0.5, 1074.0), (-2.0, -1073.0), (-2.0, 1025.0),
+       (2.0, 1e308), (2.0, -1e308)] :
+      [(10.0, -38.0), (10.0, -44.0), (2.0, -149.0), (2.0, -151.0), (10.0, 39.0),
+       (2.0, 129.0), (1e30, 2.0), (-2.0, -147.0), (-2.0, 129.0)]
+    for (x, y) in edge
+      x, y = T(x), T(y)
+      r = T(BigFloat(x)^BigFloat(y))
+      @test countulp(SLEEFPirates.pow(x, y), r) ≤ 3
+      @test countulp(SLEEFPirates.pow(Vec(x, x), Vec(y, y))(1), r) ≤ 3
+    end
+  end
 
   xx1 = map(Tuple{T,T}, [(x, y) for x = 0:0.20:100, y = 0.1:0.20:100])[:]
   xx2 = map(Tuple{T,T}, [(x, y) for x = 0:0.21:100, y = 0.1:0.22:100])[:]
