@@ -52,6 +52,24 @@ end
     _,
   ) where {B} = expk(Double(x, xlo))
 
+  # `B^1500` overflows and `B^-1500` underflows for every base `B ≥ 2`, so
+  # clamping here does not change any finite result, while keeping
+  # `N_float` well inside the range of the `MAGIC_ROUND_CONST` trick
+  # (`|N| < 2^51`) so the reduced argument `r` stays small. When `x` is
+  # clamped, `xlo` is meaningless (and may be non-finite, e.g. from `dmul`
+  # overflowing in `pow`), so drop it. NaN `x` passes through.
+  @inline function _clamp_exp_arg(x, xlo)
+    oob = abs(x) > 1500.0
+    return ifelse(oob, copysign(1500.0, x), x), ifelse(oob, zero(xlo), xlo)
+  end
+  # `2^k` for integer-valued `k::Float64` with `-1022 ≤ k ≤ 1023`, built
+  # without float→int conversion so it vectorizes on every target.
+  @inline _exp2_int(k) = reinterpret(
+    Float64,
+    reinterpret(UInt64, (k + 1023.0) + VectorizationBase.MAGIC_ROUND_CONST(Float64)) <<
+    0x0000000000000034,
+  )
+
   const J_TABLE_BASE = Ref(Base.Math.J_TABLE)
   @inline base_exp_table_pointer() = VectorizationBase.stridedpointer(
     Base.unsafe_convert(Ptr{UInt64}, pointer_from_objref(J_TABLE_BASE)),
@@ -75,6 +93,7 @@ end
     # single-rounded FMA: deterministic across hardware, same speed on
     # any target with native FMA, and at most a few ULP cost on
     # legacy targets without it.
+    x, xlo = _clamp_exp_arg(x, xlo)
     N_float = fma(
       x,
       VectorizationBase.LogBo256INV(Val{B}(), Float64),
@@ -105,6 +124,16 @@ end
     # return reinterpret(Float64, small_part), r, k, N_float, js
     twopk = (k % UInt64) << 0x0000000000000034
     res = reinterpret(Float64, twopk + reinterpret(UInt64, small_part))
+    # Adding `k` straight into the exponent bits is only valid while the
+    # result is a normal number (`small_part ∈ [2^-1/512, 2)`). Outside that
+    # range it wraps into the sign bit or borrows from it, producing garbage.
+    # Fall back to scaling by `2^k` in two exact steps, as Base's `exp` does:
+    # this rounds subnormal results once and gives `Inf`/`0` beyond the range.
+    kf = floor(N_float * 0.00390625)
+    kc = ifelse(kf > 1100.0, 1100.0, ifelse(kf < -1100.0, -1100.0, kf))
+    k1 = floor(kc * 0.5)
+    res_scaled = (small_part * _exp2_int(k1)) * _exp2_int(kc - k1)
+    res = ifelse((kf < -1020.0) | (kf > 1022.0), res_scaled, res)
     return res
   end
   @inline function exp_hilo(
@@ -115,6 +144,7 @@ end
   ) where {B}
     # See note in the `::False` branch above: `muladd` is replaced by `fma`
     # for deterministic rounding across hardware.
+    x, xlo = _clamp_exp_arg(x, xlo)
     N_float = fma(
       x,
       VectorizationBase.LogBo256INV(Val{B}(), Float64),
